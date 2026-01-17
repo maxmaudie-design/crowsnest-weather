@@ -1,48 +1,36 @@
 name: Fetch Weather Data
 
 on:
-  # Run every hour at minute 0
   schedule:
+    # Run every 5 minutes
     - cron: '*/5 * * * *'
-  
-  # Allow manual trigger from GitHub UI
-  workflow_dispatch:
-  
-  # Run on push to main (for testing)
+  workflow_dispatch: # Allow manual trigger
   push:
-    branches:
-      - main
+    branches: [ main, master ]
 
 jobs:
   fetch-weather:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v3
       
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        pip install requests
+        
+    - name: Fetch weather data
+      run: python scripts/fetch_current_conditions.py
       
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests beautifulsoup4 lxml
-      
-      - name: Fetch current conditions from RSS
-        run: python scripts/fetch_current_conditions.py
-      
-      - name: Fetch pressure forecast from OpenWeatherMap
-        env:
-          OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
-        run: python scripts/fetch_pressure_forecast.py
-        continue-on-error: true
-      
-      - name: Commit and push if changes
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add data/*.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Update weather data - $(date -u +'%Y-%m-%d %H:%M:%S UTC')" && git push)
+    - name: Commit and push if changed
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add data/current_conditions.json
+        git diff --quiet && git diff --staged --quiet || (git commit -m "Update weather data - $(date -u +'%Y-%m-%d %H:%M:%S UTC')" && git push)
