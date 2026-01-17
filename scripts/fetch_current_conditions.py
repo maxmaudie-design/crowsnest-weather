@@ -1,142 +1,141 @@
 #!/usr/bin/env python3
 """
-Fetch current weather conditions from Environment Canada RSS feed
-for Crowsnest Pass, Alberta.
+Fetch complete current weather conditions from Environment Canada RSS feed
+and save as JSON for the weather dashboard.
 
-Output: data/current_conditions.json
+This version fetches: temperature, conditions, wind, pressure, humidity, dewpoint
 """
 
+import requests
+import xml.etree.ElementTree as ET
 import json
 import re
 from datetime import datetime
-from pathlib import Path
-import xml.etree.ElementTree as ET
+import os
 
-try:
-    import requests
-except ImportError:
-    print("Error: requests library not installed. Run: pip install requests")
-    exit(1)
-
-# Configuration
+# ConfigurationåçΩ
 RSS_URL = "https://weather.gc.ca/rss/weather/49.631_-114.693_e.xml"
-OUTPUT_FILE = Path("data/current_conditions.json")
+OUTPUT_DIR = "data"
+OUTPUT_FILE = os.path.join(OUTPUT_DIR, "current_conditions.json")
 
-def parse_current_conditions(xml_content):
-    """Parse current conditions from Environment Canada RSS feed."""
-    root = ET.fromstring(xml_content)
+def parse_current_conditions(summary_text):
+    """Parse the current conditions from RSS summary text."""
+    conditions = {}
     
-    # Find the current conditions entry
-    for entry in root.findall('.//{http://www.w3.org/2005/Atom}entry'):
-        title = entry.find('{http://www.w3.org/2005/Atom}title')
-        if title is not None and 'Current Conditions' in title.text:
-            summary = entry.find('{http://www.w3.org/2005/Atom}summary')
-            updated = entry.find('{http://www.w3.org/2005/Atom}updated')
-            
-            if summary is not None:
-                return parse_conditions_text(summary.text, updated.text if updated is not None else None)
-    
-    return None
-
-def parse_conditions_text(html_text, updated_time):
-    """Extract weather data from HTML summary text."""
-    data = {
-        'timestamp': updated_time or datetime.utcnow().isoformat() + 'Z',
-        'source': 'Environment Canada',
-        'location': 'Crowsnest Pass, AB',
-        'conditions': {}
-    }
-    
-    # Parse temperature
-    temp_match = re.search(r'Temperature:</b>\s*([-+]?\d+\.?\d*)\s*°C', html_text)
+    # Temperature
+    temp_match = re.search(r'Temperature[:\s]+(-?\d+\.?\d*)\s*°C', summary_text, re.IGNORECASE)
     if temp_match:
-        data['conditions']['temperature_c'] = float(temp_match.group(1))
+        conditions['temperature'] = float(temp_match.group(1))
     
-    # Parse pressure and tendency
-    pressure_match = re.search(r'Pressure / Tendency:</b>\s*([\d.]+)\s*kPa\s*(\w+)', html_text)
-    if pressure_match:
-        data['conditions']['pressure_kpa'] = float(pressure_match.group(1))
-        data['conditions']['pressure_tendency'] = pressure_match.group(2)
+    # Condition
+    cond_match = re.search(r'Condition[:\s]+([^:]+?)(?=Temperature|Pressure|Tendency|Wind|$)', summary_text, re.IGNORECASE)
+    if cond_match:
+        conditions['condition'] = cond_match.group(1).strip()
     
-    # Parse humidity
-    humidity_match = re.search(r'Humidity:</b>\s*(\d+)\s*%', html_text)
-    if humidity_match:
-        data['conditions']['humidity_percent'] = int(humidity_match.group(1))
+    # Pressure
+    press_match = re.search(r'Pressure[:\s]+(\d+\.?\d*)\s*kPa', summary_text, re.IGNORECASE)
+    if press_match:
+        conditions['pressure_kpa'] = float(press_match.group(1))
     
-    # Parse wind chill
-    windchill_match = re.search(r'Wind Chill:</b>\s*([-+]?\d+)', html_text)
-    if windchill_match:
-        data['conditions']['wind_chill'] = int(windchill_match.group(1))
+    # Pressure Tendency
+    tend_match = re.search(r'Tendency[:\s]+(\w+)', summary_text, re.IGNORECASE)
+    if tend_match:
+        conditions['pressure_tendency'] = tend_match.group(1).lower()
     
-    # Parse dewpoint
-    dewpoint_match = re.search(r'Dewpoint:</b>\s*([-+]?\d+\.?\d*)\s*°C', html_text)
-    if dewpoint_match:
-        data['conditions']['dewpoint_c'] = float(dewpoint_match.group(1))
-    
-    # Parse wind
-    wind_match = re.search(r'Wind:</b>\s*([A-Z]+)\s*(\d+)\s*km/h', html_text)
+    # Wind
+    wind_match = re.search(r'Wind[:\s]+([^:]+?)(?=Temperature|Pressure|Humidity|$)', summary_text, re.IGNORECASE)
     if wind_match:
-        data['conditions']['wind_direction'] = wind_match.group(1)
-        data['conditions']['wind_speed_kmh'] = int(wind_match.group(2))
+        wind_text = wind_match.group(1).strip()
+        speed_match = re.search(r'(\d+)\s*km/h', wind_text, re.IGNORECASE)
+        dir_match = re.search(r'\b([NSEW]{1,3})\b', wind_text, re.IGNORECASE)
+        
+        if speed_match:
+            conditions['wind_speed_kmh'] = int(speed_match.group(1))
+        if dir_match:
+            conditions['wind_direction'] = dir_match.group(1).upper()
     
-    # Parse observation time
-    obs_match = re.search(r'Observed at:</b>\s*(.+?)<br', html_text)
-    if obs_match:
-        data['observation_time'] = obs_match.group(1).strip()
+    # Humidity
+    hum_match = re.search(r'Humidity[:\s]+(\d+)%', summary_text, re.IGNORECASE)
+    if hum_match:
+        conditions['humidity_percent'] = int(hum_match.group(1))
     
-    return data
+    # Dewpoint
+    dew_match = re.search(r'Dewpoint[:\s]+(-?\d+\.?\d*)\s*°C', summary_text, re.IGNORECASE)
+    if dew_match:
+        conditions['dewpoint'] = float(dew_match.group(1))
+    
+    return conditions
 
-def fetch_and_save_conditions():
-    """Fetch current conditions and save to JSON file."""
-    print(f"Fetching weather data from: {RSS_URL}")
-    
+def fetch_weather_data():
+    """Fetch weather data from Environment Canada RSS feed."""
     try:
+        print(f"Fetching weather data from {RSS_URL}...")
         response = requests.get(RSS_URL, timeout=10)
         response.raise_for_status()
         
-        print(f"Response received (status: {response.status_code})")
+        # Parse XML
+        root = ET.fromstring(response.content)
         
-        # Parse the RSS feed
-        weather_data = parse_current_conditions(response.content)
+        # Find namespace
+        namespaces = {'atom': 'http://www.w3.org/2005/Atom'}
         
-        if weather_data is None:
-            print("Error: Could not find current conditions in RSS feed")
-            return False
+        # Find current conditions entry
+        entries = root.findall('.//atom:entry', namespaces)
+        observation_time = None
         
-        # Create output directory if needed
-        OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+        for entry in entries:
+            title_elem = entry.find('atom:title', namespaces)
+            if title_elem is not None and 'Current Conditions' in title_elem.text:
+                summary_elem = entry.find('atom:summary', namespaces)
+                updated_elem = entry.find('atom:updated', namespaces)
+                
+                if updated_elem is not None:
+                    observation_time = updated_elem.text
+                
+                if summary_elem is not None:
+                    summary_text = summary_elem.text
+                    conditions = parse_current_conditions(summary_text)
+                    
+                    # Build full data structure
+                    full_data = {
+                        "timestamp": datetime.utcnow().isoformat() + 'Z',
+                        "source": "Environment Canada",
+                        "location": "Crowsnest Pass, AB",
+                        "conditions": conditions,
+                        "observation_time": observation_time or "Unknown",
+                        "fetch_time_utc": datetime.utcnow().isoformat() + 'Z'
+                    }
+                    
+                    # Ensure output directory exists
+                    os.makedirs(OUTPUT_DIR, exist_ok=True)
+                    
+                    # Save to JSON
+                    with open(OUTPUT_FILE, 'w') as f:
+                        json.dump(full_data, f, indent=2)
+                    
+                    print(f"✓ Weather data saved to {OUTPUT_FILE}")
+                    print(f"  Temperature: {conditions.get('temperature', 'N/A')}°C")
+                    print(f"  Condition: {conditions.get('condition', 'N/A')}")
+                    print(f"  Wind: {conditions.get('wind_direction', 'N/A')} {conditions.get('wind_speed_kmh', 'N/A')} km/h")
+                    print(f"  Pressure: {conditions.get('pressure_kpa', 'N/A')} kPa")
+                    print(f"  Humidity: {conditions.get('humidity_percent', 'N/A')}%")
+                    return True
         
-        # Add metadata
-        weather_data['fetch_time_utc'] = datetime.utcnow().isoformat() + 'Z'
-        
-        # Save to file
-        with open(OUTPUT_FILE, 'w') as f:
-            json.dump(weather_data, f, indent=2)
-        
-        print(f"✓ Weather data saved to {OUTPUT_FILE}")
-        
-        # Print summary
-        if 'conditions' in weather_data:
-            cond = weather_data['conditions']
-            print(f"\nCurrent conditions:")
-            if 'temperature_c' in cond:
-                print(f"  Temperature: {cond['temperature_c']}°C")
-            if 'pressure_kpa' in cond:
-                print(f"  Pressure: {cond['pressure_kpa']} kPa ({cond.get('pressure_tendency', 'unknown')})")
-            if 'wind_speed_kmh' in cond:
-                print(f"  Wind: {cond.get('wind_direction', '?')} {cond['wind_speed_kmh']} km/h")
-            if 'humidity_percent' in cond:
-                print(f"  Humidity: {cond['humidity_percent']}%")
-        
-        return True
+        print("✗ Could not find current conditions in RSS feed")
+        return False
         
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching RSS feed: {e}")
+        print(f"✗ Error fetching RSS feed: {e}")
+        return False
+    except ET.ParseError as e:
+        print(f"✗ Error parsing XML: {e}")
         return False
     except Exception as e:
-        print(f"Error processing data: {e}")
+        print(f"✗ Unexpected error: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 if __name__ == "__main__":
-    success = fetch_and_save_conditions()
+    success = fetch_weather_data()
     exit(0 if success else 1)
