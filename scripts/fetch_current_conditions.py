@@ -13,7 +13,7 @@ import re
 from datetime import datetime
 import os
 
-# Configuration
+# ConfigurationåçΩ
 RSS_URL = "https://weather.gc.ca/rss/weather/49.631_-114.693_e.xml"
 OUTPUT_DIR = "data"
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "current_conditions.json")
