@@ -1,125 +1,36 @@
-#!/usr/bin/env python3
-"""
-Fetch current weather conditions from Environment Canada RSS feed
-and save as JSON for the weather dashboard.
-"""
+name: Fetch Weather Data
 
-import requests
-import xml.etree.ElementTree as ET
-import json
-import re
-from datetime import datetime
+on:
+  schedule:
+    # Run every 5 minutes
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # Allow manual trigger
+  push:
+    branches: [ main, master ]
 
-# Configuration
-RSS_URL = "https://weather.gc.ca/rss/weather/49.631_-114.693_e.xml"
-OUTPUT_FILE = "current-weather.json"
-
-def parse_current_conditions(summary_text):
-    """Parse the current conditions from RSS summary text."""
-    conditions = {
-        'temperature': None,
-        'condition': None,
-        'pressure': None,
-        'tendency': None,
-        'windSpeed': None,
-        'windDirection': None,
-        'humidity': None,
-        'dewpoint': None,
-        'timestamp': datetime.utcnow().isoformat() + 'Z'
-    }
+jobs:
+  fetch-weather:
+    runs-on: ubuntu-latest
     
-    # Temperature
-    temp_match = re.search(r'Temperature[:\s]+(-?\d+\.?\d*)\s*°C', summary_text, re.IGNORECASE)
-    if temp_match:
-        conditions['temperature'] = float(temp_match.group(1))
-    
-    # Condition
-    cond_match = re.search(r'Condition[:\s]+([^:]+?)(?=Temperature|Pressure|Tendency|Wind|$)', summary_text, re.IGNORECASE)
-    if cond_match:
-        conditions['condition'] = cond_match.group(1).strip()
-    
-    # Pressure
-    press_match = re.search(r'Pressure[:\s]+(\d+\.?\d*)\s*kPa', summary_text, re.IGNORECASE)
-    if press_match:
-        conditions['pressure'] = float(press_match.group(1))
-    
-    # Pressure Tendency
-    tend_match = re.search(r'Tendency[:\s]+(\w+)', summary_text, re.IGNORECASE)
-    if tend_match:
-        conditions['tendency'] = tend_match.group(1).lower()
-    
-    # Wind
-    wind_match = re.search(r'Wind[:\s]+([^:]+?)(?=Temperature|Pressure|$)', summary_text, re.IGNORECASE)
-    if wind_match:
-        wind_text = wind_match.group(1).strip()
-        speed_match = re.search(r'(\d+)\s*km/h', wind_text, re.IGNORECASE)
-        dir_match = re.search(r'([NSEW]+)', wind_text, re.IGNORECASE)
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
         
-        if speed_match:
-            conditions['windSpeed'] = int(speed_match.group(1))
-        if dir_match:
-            conditions['windDirection'] = dir_match.group(1).upper()
-    
-    # Humidity
-    hum_match = re.search(r'Humidity[:\s]+(\d+)%', summary_text, re.IGNORECASE)
-    if hum_match:
-        conditions['humidity'] = int(hum_match.group(1))
-    
-    # Dewpoint
-    dew_match = re.search(r'Dewpoint[:\s]+(-?\d+\.?\d*)\s*°C', summary_text, re.IGNORECASE)
-    if dew_match:
-        conditions['dewpoint'] = float(dew_match.group(1))
-    
-    return conditions
-
-def fetch_weather_data():
-    """Fetch weather data from Environment Canada RSS feed."""
-    try:
-        print(f"Fetching weather data from {RSS_URL}...")
-        response = requests.get(RSS_URL, timeout=10)
-        response.raise_for_status()
+    - name: Install dependencies
+      run: |
+        pip install requests
         
-        # Parse XML
-        root = ET.fromstring(response.content)
-        
-        # Find namespace
-        namespaces = {'atom': 'http://www.w3.org/2005/Atom'}
-        
-        # Find current conditions entry
-        entries = root.findall('.//atom:entry', namespaces)
-        
-        for entry in entries:
-            title_elem = entry.find('atom:title', namespaces)
-            if title_elem is not None and 'Current Conditions' in title_elem.text:
-                summary_elem = entry.find('atom:summary', namespaces)
-                if summary_elem is not None:
-                    summary_text = summary_elem.text
-                    conditions = parse_current_conditions(summary_text)
-                    
-                    # Save to JSON
-                    with open(OUTPUT_FILE, 'w') as f:
-                        json.dump(conditions, f, indent=2)
-                    
-                    print(f"✓ Weather data saved to {OUTPUT_FILE}")
-                    print(f"  Temperature: {conditions['temperature']}°C")
-                    print(f"  Condition: {conditions['condition']}")
-                    print(f"  Wind: {conditions['windDirection']} {conditions['windSpeed']} km/h")
-                    print(f"  Pressure: {conditions['pressure']} kPa")
-                    return True
-        
-        print("✗ Could not find current conditions in RSS feed")
-        return False
-        
-    except requests.exceptions.RequestException as e:
-        print(f"✗ Error fetching RSS feed: {e}")
-        return False
-    except ET.ParseError as e:
-        print(f"✗ Error parsing XML: {e}")
-        return False
-    except Exception as e:
-        print(f"✗ Unexpected error: {e}")
-        return False
-
-if __name__ == "__main__":
-    success = fetch_weather_data()
-    exit(0 if success else 1)
+    - name: Fetch weather data
+      run: python fetch_weather.py
+      
+    - name: Commit and push if changed
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add current-weather.json
+        git diff --quiet && git diff --staged --quiet || (git commit -m "Update weather data - $(date -u +'%Y-%m-%d %H:%M:%S UTC')" && git push)
