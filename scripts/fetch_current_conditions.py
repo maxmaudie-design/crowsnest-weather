@@ -36,27 +36,34 @@ OUTPUT_DIR = "data"
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "current_conditions.json")
 HISTORY_FILE = os.path.join(OUTPUT_DIR, "temperature_history.json")
 
-def extract_condition_from_title(title_text):
-    """Extract weather condition from title like 'Current Conditions: Mainly Cloudy, 5.3°C'"""
-    if not title_text or 'Current Conditions' not in title_text:
+def extract_condition_from_summary(summary_text):
+    """
+    Extract weather condition from the summary text.
+    The summary usually starts with the condition like "Mainly cloudy. Low minus 6."
+    """
+    if not summary_text:
         return None
     
-    # Split on colon and get the part after "Current Conditions:"
-    parts = title_text.split(':', 1)
-    if len(parts) < 2:
-        return None
+    # Unescape HTML
+    text = html_module.unescape(summary_text)
     
-    # Get everything after the colon
-    condition_part = parts[1].strip()
+    # Remove HTML tags
+    text = re.sub(r'<[^>]+>', ' ', text)
     
-    # Split on comma to separate condition from temperature
-    # Example: "Mainly Cloudy, 5.3°C" -> "Mainly Cloudy"
-    condition_parts = condition_part.split(',')
-    if condition_parts:
-        condition = condition_parts[0].strip()
-        # Clean up any extra text
+    # The condition is usually the first sentence
+    # Look for patterns like "Mainly cloudy.", "Clear.", "A few clouds.", etc.
+    # Stop at the first period or "Temperature" keyword
+    
+    # Split by period or Temperature keyword
+    parts = re.split(r'\.|Temperature', text, maxsplit=1)
+    if parts:
+        condition = parts[0].strip()
+        # Clean up extra whitespace
         condition = re.sub(r'\s+', ' ', condition)
-        return condition if condition else None
+        
+        # Make sure it's not empty and not just a number
+        if condition and not re.match(r'^[\d\s\.\-°C]+$', condition):
+            return condition
     
     return None
 
@@ -319,10 +326,6 @@ def fetch_weather_data():
             if title_elem is not None and 'Current Conditions' in title_elem.text:
                 print(f"Found Current Conditions entry with title: {title_elem.text}")
                 
-                # Extract condition from title
-                condition_text = extract_condition_from_title(title_elem.text)
-                print(f"Extracted condition: {condition_text}")
-                
                 summary_elem = entry.find('atom:summary', namespaces)
                 updated_elem = entry.find('atom:updated', namespaces)
                 
@@ -333,9 +336,14 @@ def fetch_weather_data():
                     summary_text = summary_elem.text
                     
                     if summary_text:
+                        # Extract condition from the summary (first sentence)
+                        condition_text = extract_condition_from_summary(summary_text)
+                        print(f"Extracted condition from summary: {condition_text}")
+                        
+                        # Parse the rest of the conditions
                         conditions = parse_current_conditions(summary_text)
                         
-                        # Add the condition text extracted from the title
+                        # Add the condition text extracted from the summary
                         if condition_text:
                             conditions['condition'] = condition_text
                         
