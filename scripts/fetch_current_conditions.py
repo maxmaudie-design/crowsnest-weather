@@ -3,14 +3,15 @@
 Fetch complete current weather conditions from Environment Canada RSS feed
 and save as JSON for the weather dashboard.
 
-This version fetches: temperature, conditions, wind, pressure, humidity, dewpoint
+This version fetches: temperature, conditions, wind, gusts, pressure, humidity, dewpoint
+Also tracks daily high/low temperatures for the past 7 days.
 """
 
 import requests
 import xml.etree.ElementTree as ET
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import html as html_module
 
@@ -18,6 +19,7 @@ import html as html_module
 RSS_URL = "https://weather.gc.ca/rss/weather/49.631_-114.693_e.xml"
 OUTPUT_DIR = "data"
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "current_conditions.json")
+HISTORY_FILE = os.path.join(OUTPUT_DIR, "temperature_history.json")
 
 def extract_condition_from_title(title_text):
     """Extract weather condition from title like 'Current Conditions: Mainly Cloudy, 5.3°C'"""
@@ -84,8 +86,8 @@ def parse_current_conditions(summary_text):
         conditions['dewpoint'] = float(dew_match.group(1))
         print(f"Found dewpoint: {conditions['dewpoint']}")
     
-    # Wind - handle "calm" and numeric speeds
-    wind_match = re.search(r'Wind[:\s]+(.+?)(?=Air Quality|Observed|$)', summary_text, re.IGNORECASE | re.DOTALL)
+    # Wind - handle "calm" and numeric speeds, plus gusts
+    wind_match = re.search(r'Wind[:\s]+(.+?)(?=Air Quality|Pressure|Humidity|Dewpoint|Observed|$)', summary_text, re.IGNORECASE | re.DOTALL)
     if wind_match:
         wind_text = wind_match.group(1).strip()
         print(f"Wind text: {wind_text}")
@@ -106,8 +108,70 @@ def parse_current_conditions(summary_text):
             if dir_match:
                 conditions['wind_direction'] = dir_match.group(1).upper()
                 print(f"Found wind direction: {conditions['wind_direction']}")
+            
+            # Look for gust information
+            # Formats: "gust 40 km/h", "gusting to 45 km/h", "gusts 50"
+            gust_match = re.search(r'gust(?:s|ing)?(?:\s+to)?\s+(\d+)(?:\s*km/h)?', wind_text, re.IGNORECASE)
+            if gust_match:
+                conditions['wind_gust_kmh'] = int(gust_match.group(1))
+                print(f"Found wind gust: {conditions['wind_gust_kmh']}")
     
     return conditions
+
+def update_temperature_history(current_temp):
+    """Update the rolling 7-day temperature history."""
+    try:
+        # Load existing history
+        if os.path.exists(HISTORY_FILE):
+            with open(HISTORY_FILE, 'r') as f:
+                history = json.load(f)
+        else:
+            history = {"daily_records": []}
+        
+        # Get today's date (local date, not UTC)
+        today = datetime.utcnow().date().isoformat()
+        
+        # Find or create today's record
+        today_record = None
+        for record in history["daily_records"]:
+            if record["date"] == today:
+                today_record = record
+                break
+        
+        if today_record is None:
+            # Create new record for today
+            today_record = {
+                "date": today,
+                "high": current_temp,
+                "low": current_temp
+            }
+            history["daily_records"].append(today_record)
+        else:
+            # Update today's high/low
+            today_record["high"] = max(today_record["high"], current_temp)
+            today_record["low"] = min(today_record["low"], current_temp)
+        
+        # Keep only the last 7 days
+        cutoff_date = (datetime.utcnow().date() - timedelta(days=7)).isoformat()
+        history["daily_records"] = [
+            record for record in history["daily_records"]
+            if record["date"] >= cutoff_date
+        ]
+        
+        # Sort by date descending (most recent first)
+        history["daily_records"].sort(key=lambda x: x["date"], reverse=True)
+        
+        # Add metadata
+        history["last_updated"] = datetime.utcnow().isoformat() + 'Z'
+        
+        # Save updated history
+        with open(HISTORY_FILE, 'w') as f:
+            json.dump(history, f, indent=2)
+        
+        print(f"✓ Temperature history updated. {len(history['daily_records'])} days on record.")
+        
+    except Exception as e:
+        print(f"⚠ Warning: Could not update temperature history: {e}")
 
 def fetch_weather_data():
     """Fetch weather data from Environment Canada RSS feed."""
@@ -151,6 +215,10 @@ def fetch_weather_data():
                         if condition_text:
                             conditions['condition'] = condition_text
                         
+                        # Update temperature history if we have a temperature
+                        if 'temperature' in conditions:
+                            update_temperature_history(conditions['temperature'])
+                        
                         # Build full data structure
                         full_data = {
                             "timestamp": datetime.utcnow().isoformat() + 'Z',
@@ -172,6 +240,8 @@ def fetch_weather_data():
                         print(f"  Condition: {conditions.get('condition', 'N/A')}")
                         print(f"  Temperature: {conditions.get('temperature', 'N/A')}°C")
                         print(f"  Wind: {conditions.get('wind_direction', 'N/A')} {conditions.get('wind_speed_kmh', 'N/A')} km/h")
+                        if 'wind_gust_kmh' in conditions:
+                            print(f"  Gusts: {conditions['wind_gust_kmh']} km/h")
                         print(f"  Pressure: {conditions.get('pressure_kpa', 'N/A')} kPa")
                         print(f"  Humidity: {conditions.get('humidity_percent', 'N/A')}%")
                         print(f"  Dewpoint: {conditions.get('dewpoint', 'N/A')}°C")
