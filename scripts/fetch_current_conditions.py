@@ -17,9 +17,21 @@ import html as html_module
 
 # Configuration
 RSS_URL = "https://weather.gc.ca/rss/weather/49.631_-114.693_e.xml"
-# Environment Canada historical data - we'll use the Pincher Creek station (closest with recent data)
-# Station ID for Pincher Creek: 48844
-HISTORICAL_URL = "https://climate.weather.gc.ca/climate_data/daily_data_e.html"
+
+# CROWSNEST PASS STATION
+# Climate Identifier: 3051R4R
+# Coordinates: 49.627525, -114.48195
+# You can find the station ID by searching here:
+# https://climate.weather.gc.ca/historical_data/search_historic_data_e.html
+# Search for "CROWSNEST" in Alberta to get the station ID
+
+# Common station IDs in the area (try each to find which has recent data):
+STATION_IDS_TO_TRY = [
+    "2695",   # CROWSNEST (try this first - Climate ID 3051R4R)
+    "48844",  # PINCHER CREEK (backup)
+    "2696",   # Possible alternate Crowsnest station
+]
+
 OUTPUT_DIR = "data"
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "current_conditions.json")
 HISTORY_FILE = os.path.join(OUTPUT_DIR, "temperature_history.json")
@@ -124,8 +136,8 @@ def parse_current_conditions(summary_text):
 def fetch_historical_temperatures():
     """
     Fetch 7-day historical temperature data from Environment Canada.
-    Uses the CSV download format for reliability.
-    Station: Pincher Creek (closest reliable station to Crowsnest Pass)
+    Uses the CSV download format for Crowsnest Pass station.
+    Station: CROWSNEST (Climate ID: 3051R4R)
     """
     try:
         print("Fetching 7-day temperature history from Environment Canada...")
@@ -133,32 +145,33 @@ def fetch_historical_temperatures():
         history_records = []
         today = datetime.now()
         
-        # Fetch last 7 days of data
-        # We'll use the CSV bulk download which is more reliable
-        # Station ID 48844 is Pincher Creek
-        station_id = "48844"
-        
-        # Try to get the current month and previous month if needed
-        for month_offset in range(0, 2):  # Current month and previous month
-            target_date = today - timedelta(days=30 * month_offset)
-            year = target_date.year
-            month = target_date.month
+        # Try multiple station IDs to find which one has recent data
+        for station_id in STATION_IDS_TO_TRY:
+            print(f"Trying station ID: {station_id}")
             
-            # Build the CSV download URL
-            csv_url = f"https://climate.weather.gc.ca/climate_data/bulk_data_e.html?format=csv&stationID={station_id}&Year={year}&Month={month}&timeframe=2&submit=Download+Data"
-            
-            print(f"Fetching data for {year}-{month:02d}...")
-            
-            try:
-                response = requests.get(csv_url, timeout=15)
-                if response.status_code == 200:
+            # Try to get the current month and previous month if needed
+            for month_offset in range(0, 2):  # Current month and previous month
+                target_date = today - timedelta(days=30 * month_offset)
+                year = target_date.year
+                month = target_date.month
+                
+                # Build the CSV download URL
+                csv_url = f"https://climate.weather.gc.ca/climate_data/bulk_data_e.html?format=csv&stationID={station_id}&Year={year}&Month={month}&timeframe=2&submit=Download+Data"
+                
+                print(f"  Fetching data for {year}-{month:02d}...")
+                
+                try:
+                    response = requests.get(csv_url, timeout=15)
+                    if response.status_code != 200:
+                        continue
+                    
                     # Parse CSV
                     lines = response.text.strip().split('\n')
                     
                     # Find header row (starts with "Date/Time")
                     header_idx = None
                     for i, line in enumerate(lines):
-                        if line.startswith('"Date/Time"') or line.startswith('Date/Time'):
+                        if 'Date/Time' in line and ('Max Temp' in line or 'Min Temp' in line):
                             header_idx = i
                             break
                     
@@ -166,22 +179,43 @@ def fetch_historical_temperatures():
                         continue
                     
                     # Parse header to find column indices
-                    header = lines[header_idx].strip('"').split('","')
+                    header_line = lines[header_idx]
+                    # Handle both quoted and unquoted CSV
+                    if '","' in header_line:
+                        header = header_line.strip('"').split('","')
+                    else:
+                        header = [h.strip('"') for h in header_line.split(',')]
+                    
                     try:
                         date_idx = header.index('Date/Time')
-                        max_temp_idx = header.index('Max Temp (°C)')
-                        min_temp_idx = header.index('Min Temp (°C)')
+                        # Find max and min temp columns (they might have different exact names)
+                        max_temp_idx = None
+                        min_temp_idx = None
+                        for i, col in enumerate(header):
+                            if 'Max Temp' in col:
+                                max_temp_idx = i
+                            if 'Min Temp' in col:
+                                min_temp_idx = i
+                        
+                        if max_temp_idx is None or min_temp_idx is None:
+                            continue
+                            
                     except ValueError:
-                        print("Could not find required columns in CSV")
+                        print("  Could not find required columns in CSV")
                         continue
                     
                     # Parse data rows (starting after header)
+                    records_found = 0
                     for line in lines[header_idx + 1:]:
                         if not line.strip():
                             continue
                         
-                        # Parse CSV line
-                        parts = line.strip('"').split('","')
+                        # Parse CSV line (handle quoted fields)
+                        if '","' in line:
+                            parts = line.strip('"').split('","')
+                        else:
+                            parts = [p.strip('"') for p in line.split(',')]
+                            
                         if len(parts) <= max(date_idx, max_temp_idx, min_temp_idx):
                             continue
                         
@@ -197,9 +231,9 @@ def fetch_historical_temperatures():
                             # Parse date (format: YYYY-MM-DD)
                             record_date = datetime.strptime(date_str, '%Y-%m-%d').date()
                             
-                            # Only keep last 7 days
+                            # Only keep last 8 days (including today, even if incomplete)
                             days_ago = (today.date() - record_date).days
-                            if days_ago < 0 or days_ago > 7:
+                            if days_ago < 0 or days_ago > 8:
                                 continue
                             
                             max_temp = float(max_temp_str)
@@ -210,13 +244,26 @@ def fetch_historical_temperatures():
                                 "high": max_temp,
                                 "low": min_temp
                             })
+                            records_found += 1
                             
                         except (ValueError, AttributeError) as e:
                             continue
+                    
+                    if records_found > 0:
+                        print(f"  Found {records_found} records from station {station_id}")
+                
+                except requests.exceptions.RequestException as e:
+                    print(f"  Error fetching month {year}-{month}: {e}")
+                    continue
             
-            except requests.exceptions.RequestException as e:
-                print(f"Error fetching month {year}-{month}: {e}")
-                continue
+            # If we found any records with this station, stop trying other stations
+            if history_records:
+                print(f"✓ Using station ID {station_id}")
+                break
+        
+        if not history_records:
+            print("⚠ No historical temperature data available from any station")
+            return False
         
         # Remove duplicates and sort by date (newest first)
         seen_dates = set()
@@ -228,25 +275,21 @@ def fetch_historical_temperatures():
         
         unique_records.sort(key=lambda x: x['date'], reverse=True)
         
-        # Keep only 7 most recent
+        # Keep only 7 most recent (excluding today if incomplete)
         unique_records = unique_records[:7]
         
-        if unique_records:
-            history_data = {
-                "daily_records": unique_records,
-                "last_updated": datetime.utcnow().isoformat() + 'Z',
-                "source": "Environment Canada - Pincher Creek Station"
-            }
-            
-            # Save to file
-            with open(HISTORY_FILE, 'w') as f:
-                json.dump(history_data, f, indent=2)
-            
-            print(f"✓ Fetched {len(unique_records)} days of temperature history")
-            return True
-        else:
-            print("⚠ No historical temperature data available")
-            return False
+        history_data = {
+            "daily_records": unique_records,
+            "last_updated": datetime.utcnow().isoformat() + 'Z',
+            "source": "Environment Canada - Crowsnest Pass Station"
+        }
+        
+        # Save to file
+        with open(HISTORY_FILE, 'w') as f:
+            json.dump(history_data, f, indent=2)
+        
+        print(f"✓ Fetched {len(unique_records)} days of temperature history")
+        return True
             
     except Exception as e:
         print(f"⚠ Warning: Could not fetch temperature history: {e}")
