@@ -19,6 +19,30 @@ RSS_URL = "https://weather.gc.ca/rss/weather/49.631_-114.693_e.xml"
 OUTPUT_DIR = "data"
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "current_conditions.json")
 
+def extract_condition_from_title(title_text):
+    """Extract weather condition from title like 'Current Conditions: Mainly Cloudy, 5.3°C'"""
+    if not title_text or 'Current Conditions' not in title_text:
+        return None
+    
+    # Split on colon and get the part after "Current Conditions:"
+    parts = title_text.split(':', 1)
+    if len(parts) < 2:
+        return None
+    
+    # Get everything after the colon
+    condition_part = parts[1].strip()
+    
+    # Split on comma to separate condition from temperature
+    # Example: "Mainly Cloudy, 5.3°C" -> "Mainly Cloudy"
+    condition_parts = condition_part.split(',')
+    if condition_parts:
+        condition = condition_parts[0].strip()
+        # Clean up any extra text
+        condition = re.sub(r'\s+', ' ', condition)
+        return condition if condition else None
+    
+    return None
+
 def parse_current_conditions(summary_text):
     """Parse the current conditions from RSS summary text."""
     print(f"Raw summary text: {summary_text[:200]}...")  # Debug
@@ -107,6 +131,10 @@ def fetch_weather_data():
             if title_elem is not None and 'Current Conditions' in title_elem.text:
                 print(f"Found Current Conditions entry with title: {title_elem.text}")
                 
+                # Extract condition from title
+                condition_text = extract_condition_from_title(title_elem.text)
+                print(f"Extracted condition: {condition_text}")
+                
                 summary_elem = entry.find('atom:summary', namespaces)
                 updated_elem = entry.find('atom:updated', namespaces)
                 
@@ -118,6 +146,10 @@ def fetch_weather_data():
                     
                     if summary_text:
                         conditions = parse_current_conditions(summary_text)
+                        
+                        # Add the condition text extracted from the title
+                        if condition_text:
+                            conditions['condition'] = condition_text
                         
                         # Build full data structure
                         full_data = {
@@ -137,6 +169,7 @@ def fetch_weather_data():
                             json.dump(full_data, f, indent=2)
                         
                         print(f"✓ Weather data saved to {OUTPUT_FILE}")
+                        print(f"  Condition: {conditions.get('condition', 'N/A')}")
                         print(f"  Temperature: {conditions.get('temperature', 'N/A')}°C")
                         print(f"  Wind: {conditions.get('wind_direction', 'N/A')} {conditions.get('wind_speed_kmh', 'N/A')} km/h")
                         print(f"  Pressure: {conditions.get('pressure_kpa', 'N/A')} kPa")
