@@ -302,6 +302,12 @@
         let currentData = null;
         let historyData = null;
 
+        // Format temperature to 1 decimal place
+        function formatTemp(temp) {
+            if (temp === undefined || temp === null) return '--';
+            return temp.toFixed(1);
+        }
+
         // Fetch temperature history
         async function fetchTemperatureHistory() {
             try {
@@ -347,7 +353,7 @@
                         // Convert the data format to what display functions expect
                         currentData = {
                             temperature: rawData.conditions?.temperature,
-                            condition: rawData.conditions?.condition || 'Not Available',
+                            condition: rawData.conditions?.condition,
                             pressure: rawData.conditions?.pressure_kpa,
                             tendency: rawData.conditions?.pressure_tendency,
                             windSpeed: rawData.conditions?.wind_speed_kmh,
@@ -403,7 +409,7 @@
                             return `
                                 <div class="history-row">
                                     <span class="history-date">${dayName}</span>
-                                    <span class="history-temps">${record.high.toFixed(1)}° / ${record.low.toFixed(1)}°</span>
+                                    <span class="history-temps">${formatTemp(record.high)}° / ${formatTemp(record.low)}°</span>
                                 </div>
                             `;
                         }).join('')}
@@ -414,7 +420,7 @@
             const html = `
                 <h2>Current Conditions</h2>
                 <div class="current-temp">
-                    ${data.temperature !== undefined ? data.temperature : '--'}<span class="unit">°C</span>
+                    ${formatTemp(data.temperature)}<span class="unit">°C</span>
                 </div>
                 <div class="condition">${data.condition || 'Not Available'}</div>
                 <div class="detail-row">
@@ -423,7 +429,7 @@
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Dewpoint</span>
-                    <span class="detail-value">${data.dewpoint !== undefined ? data.dewpoint : '--'}°C</span>
+                    <span class="detail-value">${formatTemp(data.dewpoint)}°C</span>
                 </div>
                 ${historyHTML}
             `;
@@ -486,7 +492,7 @@
             const html = `
                 <h2>Air Pressure</h2>
                 <div class="pressure-value">
-                    ${data.pressure !== undefined ? data.pressure : '--'} <span style="font-size: 0.5em; color: #999;">kPa</span>
+                    ${data.pressure !== undefined ? data.pressure.toFixed(1) : '--'} <span style="font-size: 0.5em; color: #999;">kPa</span>
                 </div>
                 ${trendText ? `<div class="trend ${trendClass}">${trendText}</div>` : ''}
                 <div style="text-align: center; margin-top: 15px; color: #666; font-size: 0.9em;">
