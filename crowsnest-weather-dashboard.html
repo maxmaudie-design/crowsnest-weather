@@ -109,6 +109,34 @@
             font-weight: 600;
         }
 
+        .history-section {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .history-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .history-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 0.9em;
+        }
+
+        .history-date {
+            color: #999;
+        }
+
+        .history-temps {
+            color: #333;
+        }
+
         .wind-direction {
             text-align: center;
             margin: 20px 0;
@@ -125,6 +153,21 @@
             font-weight: bold;
             color: #764ba2;
             margin-top: 10px;
+        }
+
+        .gust-info {
+            text-align: center;
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(118, 75, 162, 0.1);
+            border-radius: 8px;
+            font-size: 0.95em;
+            color: #666;
+        }
+
+        .gust-speed {
+            font-weight: bold;
+            color: #764ba2;
         }
 
         .historical-compare {
@@ -250,54 +293,79 @@
     <script>
         // Configuration
         const CONFIG = {
-            // Your existing weather data location
             WEATHER_JSON_URL: './data/current_conditions.json',
-            GITHUB_RAW_URL: 'https://raw.githubusercontent.com/maxmaudie-design/crowsnest-weather/main/data/current_conditions.json',
+            HISTORY_JSON_URL: './data/temperature_history.json',
+            GITHUB_RAW_URL: 'https://raw.githubusercontent.com/maxmaudie-design/crowsnest-weather/main/data/',
             COORDS: { lat: 49.631, lon: -114.693 }
         };
 
         let currentData = null;
+        let historyData = null;
+
+        // Fetch temperature history
+        async function fetchTemperatureHistory() {
+            try {
+                let response;
+                try {
+                    response = await fetch(CONFIG.HISTORY_JSON_URL + '?t=' + Date.now());
+                } catch (e) {
+                    response = await fetch(CONFIG.GITHUB_RAW_URL + 'temperature_history.json?t=' + Date.now());
+                }
+                
+                if (response.ok) {
+                    historyData = await response.json();
+                    console.log('Temperature history loaded:', historyData);
+                }
+            } catch (error) {
+                console.log('Temperature history not yet available:', error.message);
+            }
+        }
 
         // Fetch current conditions from GitHub-hosted JSON
         async function fetchCurrentConditions() {
             try {
                 console.log('Fetching weather data from GitHub...');
                 
-                // Try relative path first (for GitHub Pages), then raw GitHub URL
-                let response;
-                try {
-                    response = await fetch(CONFIG.WEATHER_JSON_URL + '?t=' + Date.now()); // Cache buster
-                } catch (e) {
-                    console.log('Local fetch failed, trying GitHub raw URL...');
-                    response = await fetch(CONFIG.GITHUB_RAW_URL + '?t=' + Date.now());
-                }
+                // Fetch both current conditions and history
+                await Promise.all([
+                    (async () => {
+                        let response;
+                        try {
+                            response = await fetch(CONFIG.WEATHER_JSON_URL + '?t=' + Date.now());
+                        } catch (e) {
+                            console.log('Local fetch failed, trying GitHub raw URL...');
+                            response = await fetch(CONFIG.GITHUB_RAW_URL + 'current_conditions.json?t=' + Date.now());
+                        }
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        
+                        const rawData = await response.json();
+                        console.log('Weather data loaded successfully:', rawData);
+                        
+                        // Convert the data format to what display functions expect
+                        currentData = {
+                            temperature: rawData.conditions?.temperature,
+                            condition: rawData.conditions?.condition || 'Not Available',
+                            pressure: rawData.conditions?.pressure_kpa,
+                            tendency: rawData.conditions?.pressure_tendency,
+                            windSpeed: rawData.conditions?.wind_speed_kmh,
+                            windGust: rawData.conditions?.wind_gust_kmh,
+                            windDirection: rawData.conditions?.wind_direction,
+                            humidity: rawData.conditions?.humidity_percent,
+                            dewpoint: rawData.conditions?.dewpoint,
+                            timestamp: rawData.timestamp || rawData.fetch_time_utc
+                        };
+                    })(),
+                    fetchTemperatureHistory()
+                ]);
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const rawData = await response.json();
-                console.log('Weather data loaded successfully:', rawData);
-                
-                // Convert the data format to what display functions expect
-                const data = {
-                    temperature: rawData.conditions?.temperature,
-                    condition: rawData.conditions?.condition || 'Not Available',
-                    pressure: rawData.conditions?.pressure_kpa,
-                    tendency: rawData.conditions?.pressure_tendency,
-                    windSpeed: rawData.conditions?.wind_speed_kmh,
-                    windDirection: rawData.conditions?.wind_direction,
-                    humidity: rawData.conditions?.humidity_percent,
-                    dewpoint: rawData.conditions?.dewpoint,
-                    timestamp: rawData.timestamp || rawData.fetch_time_utc
-                };
-                
-                // Display the data
-                displayCurrentConditions(data);
-                displayWindConditions(data);
-                displayPressure(data);
+                // Display all data
+                displayCurrentConditions(currentData);
+                displayWindConditions(currentData);
+                displayPressure(currentData);
                 displayClimateNormals();
-                currentData = data;
                 
             } catch (error) {
                 console.error('Error fetching weather data:', error);
@@ -321,8 +389,28 @@
             }
         }
 
-        // Display current conditions
+        // Display current conditions with 7-day history
         function displayCurrentConditions(data) {
+            let historyHTML = '';
+            
+            if (historyData && historyData.daily_records && historyData.daily_records.length > 0) {
+                historyHTML = `
+                    <div class="history-section">
+                        <div class="history-title">Past 7 Days (High / Low)</div>
+                        ${historyData.daily_records.map(record => {
+                            const date = new Date(record.date);
+                            const dayName = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                            return `
+                                <div class="history-row">
+                                    <span class="history-date">${dayName}</span>
+                                    <span class="history-temps">${record.high.toFixed(1)}° / ${record.low.toFixed(1)}°</span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            }
+            
             const html = `
                 <h2>Current Conditions</h2>
                 <div class="current-temp">
@@ -337,14 +425,25 @@
                     <span class="detail-label">Dewpoint</span>
                     <span class="detail-value">${data.dewpoint !== undefined ? data.dewpoint : '--'}°C</span>
                 </div>
+                ${historyHTML}
             `;
             document.getElementById('current-card').innerHTML = html;
         }
 
-        // Display wind conditions
+        // Display wind conditions with gusts
         function displayWindConditions(data) {
             const arrow = getWindArrow(data.windDirection);
             const rotation = getWindRotation(data.windDirection);
+            
+            let gustHTML = '';
+            if (data.windGust && data.windGust > 0) {
+                gustHTML = `
+                    <div class="gust-info">
+                        Gusts: <span class="gust-speed">${data.windGust} km/h</span>
+                        (${(data.windGust * 0.621371).toFixed(1)} mph)
+                    </div>
+                `;
+            }
             
             const html = `
                 <h2>Wind Conditions</h2>
@@ -359,9 +458,10 @@
                 <div class="wind-speed">
                     ${data.windSpeed || '0'} km/h
                 </div>
-                <div style="text-align: center; margin-top: 15px; color: #666; font-size: 0.9em;">
+                <div style="text-align: center; margin-top: 10px; color: #666; font-size: 0.9em;">
                     ${data.windSpeed ? `${(data.windSpeed * 0.621371).toFixed(1)} mph` : ''}
                 </div>
+                ${gustHTML}
             `;
             document.getElementById('wind-card').innerHTML = html;
         }
