@@ -4,7 +4,7 @@ Fetch complete current weather conditions from Environment Canada RSS feed
 and save as JSON for the weather dashboard.
 
 This version fetches: temperature, conditions, wind, gusts, pressure, humidity, dewpoint
-Also tracks daily high/low temperatures for the past 7 days.
+Also fetches 7-day historical high/low temperatures from Environment Canada.
 """
 
 import requests
@@ -17,6 +17,9 @@ import html as html_module
 
 # Configuration
 RSS_URL = "https://weather.gc.ca/rss/weather/49.631_-114.693_e.xml"
+# Environment Canada historical data - we'll use the Pincher Creek station (closest with recent data)
+# Station ID for Pincher Creek: 48844
+HISTORICAL_URL = "https://climate.weather.gc.ca/climate_data/daily_data_e.html"
 OUTPUT_DIR = "data"
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "current_conditions.json")
 HISTORY_FILE = os.path.join(OUTPUT_DIR, "temperature_history.json")
@@ -118,60 +121,138 @@ def parse_current_conditions(summary_text):
     
     return conditions
 
-def update_temperature_history(current_temp):
-    """Update the rolling 7-day temperature history."""
+def fetch_historical_temperatures():
+    """
+    Fetch 7-day historical temperature data from Environment Canada.
+    Uses the CSV download format for reliability.
+    Station: Pincher Creek (closest reliable station to Crowsnest Pass)
+    """
     try:
-        # Load existing history
-        if os.path.exists(HISTORY_FILE):
-            with open(HISTORY_FILE, 'r') as f:
-                history = json.load(f)
-        else:
-            history = {"daily_records": []}
+        print("Fetching 7-day temperature history from Environment Canada...")
         
-        # Get today's date (local date, not UTC)
-        today = datetime.utcnow().date().isoformat()
+        history_records = []
+        today = datetime.now()
         
-        # Find or create today's record
-        today_record = None
-        for record in history["daily_records"]:
-            if record["date"] == today:
-                today_record = record
-                break
+        # Fetch last 7 days of data
+        # We'll use the CSV bulk download which is more reliable
+        # Station ID 48844 is Pincher Creek
+        station_id = "48844"
         
-        if today_record is None:
-            # Create new record for today
-            today_record = {
-                "date": today,
-                "high": current_temp,
-                "low": current_temp
+        # Try to get the current month and previous month if needed
+        for month_offset in range(0, 2):  # Current month and previous month
+            target_date = today - timedelta(days=30 * month_offset)
+            year = target_date.year
+            month = target_date.month
+            
+            # Build the CSV download URL
+            csv_url = f"https://climate.weather.gc.ca/climate_data/bulk_data_e.html?format=csv&stationID={station_id}&Year={year}&Month={month}&timeframe=2&submit=Download+Data"
+            
+            print(f"Fetching data for {year}-{month:02d}...")
+            
+            try:
+                response = requests.get(csv_url, timeout=15)
+                if response.status_code == 200:
+                    # Parse CSV
+                    lines = response.text.strip().split('\n')
+                    
+                    # Find header row (starts with "Date/Time")
+                    header_idx = None
+                    for i, line in enumerate(lines):
+                        if line.startswith('"Date/Time"') or line.startswith('Date/Time'):
+                            header_idx = i
+                            break
+                    
+                    if header_idx is None:
+                        continue
+                    
+                    # Parse header to find column indices
+                    header = lines[header_idx].strip('"').split('","')
+                    try:
+                        date_idx = header.index('Date/Time')
+                        max_temp_idx = header.index('Max Temp (°C)')
+                        min_temp_idx = header.index('Min Temp (°C)')
+                    except ValueError:
+                        print("Could not find required columns in CSV")
+                        continue
+                    
+                    # Parse data rows (starting after header)
+                    for line in lines[header_idx + 1:]:
+                        if not line.strip():
+                            continue
+                        
+                        # Parse CSV line
+                        parts = line.strip('"').split('","')
+                        if len(parts) <= max(date_idx, max_temp_idx, min_temp_idx):
+                            continue
+                        
+                        date_str = parts[date_idx]
+                        max_temp_str = parts[max_temp_idx]
+                        min_temp_str = parts[min_temp_idx]
+                        
+                        # Skip if temps are missing
+                        if not max_temp_str or not min_temp_str or max_temp_str == '' or min_temp_str == '':
+                            continue
+                        
+                        try:
+                            # Parse date (format: YYYY-MM-DD)
+                            record_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                            
+                            # Only keep last 7 days
+                            days_ago = (today.date() - record_date).days
+                            if days_ago < 0 or days_ago > 7:
+                                continue
+                            
+                            max_temp = float(max_temp_str)
+                            min_temp = float(min_temp_str)
+                            
+                            history_records.append({
+                                "date": record_date.isoformat(),
+                                "high": max_temp,
+                                "low": min_temp
+                            })
+                            
+                        except (ValueError, AttributeError) as e:
+                            continue
+            
+            except requests.exceptions.RequestException as e:
+                print(f"Error fetching month {year}-{month}: {e}")
+                continue
+        
+        # Remove duplicates and sort by date (newest first)
+        seen_dates = set()
+        unique_records = []
+        for record in history_records:
+            if record['date'] not in seen_dates:
+                seen_dates.add(record['date'])
+                unique_records.append(record)
+        
+        unique_records.sort(key=lambda x: x['date'], reverse=True)
+        
+        # Keep only 7 most recent
+        unique_records = unique_records[:7]
+        
+        if unique_records:
+            history_data = {
+                "daily_records": unique_records,
+                "last_updated": datetime.utcnow().isoformat() + 'Z',
+                "source": "Environment Canada - Pincher Creek Station"
             }
-            history["daily_records"].append(today_record)
+            
+            # Save to file
+            with open(HISTORY_FILE, 'w') as f:
+                json.dump(history_data, f, indent=2)
+            
+            print(f"✓ Fetched {len(unique_records)} days of temperature history")
+            return True
         else:
-            # Update today's high/low
-            today_record["high"] = max(today_record["high"], current_temp)
-            today_record["low"] = min(today_record["low"], current_temp)
-        
-        # Keep only the last 7 days
-        cutoff_date = (datetime.utcnow().date() - timedelta(days=7)).isoformat()
-        history["daily_records"] = [
-            record for record in history["daily_records"]
-            if record["date"] >= cutoff_date
-        ]
-        
-        # Sort by date descending (most recent first)
-        history["daily_records"].sort(key=lambda x: x["date"], reverse=True)
-        
-        # Add metadata
-        history["last_updated"] = datetime.utcnow().isoformat() + 'Z'
-        
-        # Save updated history
-        with open(HISTORY_FILE, 'w') as f:
-            json.dump(history, f, indent=2)
-        
-        print(f"✓ Temperature history updated. {len(history['daily_records'])} days on record.")
-        
+            print("⚠ No historical temperature data available")
+            return False
+            
     except Exception as e:
-        print(f"⚠ Warning: Could not update temperature history: {e}")
+        print(f"⚠ Warning: Could not fetch temperature history: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 def fetch_weather_data():
     """Fetch weather data from Environment Canada RSS feed."""
@@ -215,9 +296,8 @@ def fetch_weather_data():
                         if condition_text:
                             conditions['condition'] = condition_text
                         
-                        # Update temperature history if we have a temperature
-                        if 'temperature' in conditions:
-                            update_temperature_history(conditions['temperature'])
+                        # Fetch historical temperatures
+                        fetch_historical_temperatures()
                         
                         # Build full data structure
                         full_data = {
