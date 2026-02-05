@@ -1,0 +1,31 @@
+{
+  "daily_records": [
+    {
+      "date": "2026-02-04",
+      "high": 9.1,
+      "low": 8.0
+    },
+    {
+      "date": "2026-01-04",
+      "high": 5.1,
+      "low": 0.4
+    },
+    {
+      "date": "2026-01-03",
+      "high": 5.9,
+      "low": -8.1
+    },
+    {
+      "date": "2026-01-02",
+      "high": 4.0,
+      "low": -3.8
+    },
+    {
+      "date": "2026-01-01",
+      "high": 2.8,
+      "low": -13.3
+    }
+  ],
+  "last_updated": "2026-02-05T02:30:00Z",
+  "source": "Self-tracked from Environment Canada observations"
+}
