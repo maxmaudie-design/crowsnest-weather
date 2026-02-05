@@ -170,6 +170,26 @@
             color: #764ba2;
         }
 
+        .daily-max-gust {
+            text-align: center;
+            margin-top: 15px;
+            padding: 12px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            border-radius: 8px;
+            color: white;
+        }
+
+        .daily-max-gust .label {
+            font-size: 0.85em;
+            opacity: 0.9;
+        }
+
+        .daily-max-gust .value {
+            font-size: 1.4em;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
         .historical-compare {
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         }
@@ -301,6 +321,7 @@
 
         let currentData = null;
         let historyData = null;
+        let dailyStats = null;
 
         // Format temperature to 1 decimal place
         function formatTemp(temp) {
@@ -350,6 +371,9 @@
                         const rawData = await response.json();
                         console.log('Weather data loaded successfully:', rawData);
                         
+                        // Store daily stats
+                        dailyStats = rawData.daily_stats;
+                        
                         // Convert the data format to what display functions expect
                         currentData = {
                             temperature: rawData.conditions?.temperature,
@@ -358,6 +382,7 @@
                             tendency: rawData.conditions?.pressure_tendency,
                             windSpeed: rawData.conditions?.wind_speed_kmh,
                             windGust: rawData.conditions?.wind_gust_kmh,
+                            dailyMaxGust: rawData.conditions?.daily_max_gust_kmh || rawData.daily_stats?.max_gust_kmh,
                             windDirection: rawData.conditions?.wind_direction,
                             humidity: rawData.conditions?.humidity_percent,
                             dewpoint: rawData.conditions?.dewpoint,
@@ -436,7 +461,7 @@
             document.getElementById('current-card').innerHTML = html;
         }
 
-        // Display wind conditions with gusts
+        // Display wind conditions with gusts and daily max
         function displayWindConditions(data) {
             const arrow = getWindArrow(data.windDirection);
             const rotation = getWindRotation(data.windDirection);
@@ -445,8 +470,18 @@
             if (data.windGust && data.windGust > 0) {
                 gustHTML = `
                     <div class="gust-info">
-                        Gusts: <span class="gust-speed">${data.windGust} km/h</span>
+                        Current Gusts: <span class="gust-speed">${data.windGust} km/h</span>
                         (${(data.windGust * 0.621371).toFixed(1)} mph)
+                    </div>
+                `;
+            }
+            
+            let dailyMaxGustHTML = '';
+            if (data.dailyMaxGust && data.dailyMaxGust > 0) {
+                dailyMaxGustHTML = `
+                    <div class="daily-max-gust">
+                        <div class="label">🌪️ Today's Max Gust</div>
+                        <div class="value">${data.dailyMaxGust} km/h (${(data.dailyMaxGust * 0.621371).toFixed(1)} mph)</div>
                     </div>
                 `;
             }
@@ -468,6 +503,7 @@
                     ${data.windSpeed ? `${(data.windSpeed * 0.621371).toFixed(1)} mph` : ''}
                 </div>
                 ${gustHTML}
+                ${dailyMaxGustHTML}
             `;
             document.getElementById('wind-card').innerHTML = html;
         }
