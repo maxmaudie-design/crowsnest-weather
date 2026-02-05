@@ -32,48 +32,107 @@ OUTPUT_DIR = "data"
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "current_conditions.json")
 HISTORY_FILE = os.path.join(OUTPUT_DIR, "temperature_history.json")
 
-def extract_condition_from_summary(summary_text):
+
+def extract_condition_from_forecast_title(title):
     """
-    Extract weather condition from the summary text.
-    The summary structure is typically:
-    - First line/sentence: Weather condition (e.g., "Mainly cloudy.")
-    - Second line: "Observed at: Station Time"
-    - Rest: Detailed conditions
+    Extract the weather condition from a forecast entry title.
+    Title format examples:
+    - "Wednesday night: Partly cloudy. Low 7."
+    - "Thursday: Mainly sunny. High 16."
+    - "Friday: A mix of sun and cloud. High 13."
+    
+    Returns the condition part (e.g., "Partly cloudy", "Mainly sunny", "A mix of sun and cloud")
     """
-    if not summary_text:
+    if not title:
         return None
     
-    # Unescape HTML
-    text = html_module.unescape(summary_text)
+    # Split on the colon to get the forecast part
+    if ':' in title:
+        _, forecast_part = title.split(':', 1)
+        forecast_part = forecast_part.strip()
+    else:
+        return None
     
-    # Remove HTML tags
-    text = re.sub(r'<[^>]+>', ' ', text)
+    # The condition is everything before "High" or "Low" or "POP"
+    # Remove the temperature/probability part
+    condition = re.sub(r'\s*(High|Low|POP).*$', '', forecast_part, flags=re.IGNORECASE)
+    condition = condition.strip().rstrip('.')
     
-    # Split into lines
-    lines = [line.strip() for line in text.split('\n') if line.strip()]
-    
-    # The condition is usually the FIRST line, before "Observed at"
-    for line in lines:
-        # Skip empty lines
-        if not line:
-            continue
-            
-        # Skip lines that start with "Observed at", "Temperature", "Condition", etc.
-        if re.match(r'^(Observed at|Temperature|Condition|Pressure|Humidity|Dewpoint|Wind)', line, re.IGNORECASE):
-            continue
-        
-        # Clean up the line
-        condition = line.strip()
-        
-        # Remove any trailing period
-        condition = condition.rstrip('.')
-        
-        # Make sure it's not empty and not just a number
-        if condition and not re.match(r'^[\d\s\.\-°C]+$', condition):
-            print(f"Extracted condition: '{condition}'")
-            return condition
+    if condition:
+        return condition
     
     return None
+
+
+def get_current_forecast_condition(entries, namespaces):
+    """
+    Find the current forecast entry based on time of day and extract its condition.
+    Environment Canada provides forecasts for periods like:
+    - "Wednesday night" (evening/overnight)
+    - "Thursday" (daytime)
+    """
+    now = datetime.now()
+    current_hour = now.hour
+    
+    # Determine if we're in "day" or "night" period
+    # Night typically starts around 6 PM (18:00)
+    is_night = current_hour >= 18 or current_hour < 6
+    
+    # Get day names
+    weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    today_name = weekdays[now.weekday()]
+    
+    # Look for the matching forecast entry
+    for entry in entries:
+        title_elem = entry.find('atom:title', namespaces)
+        category_elem = entry.find('atom:category', namespaces)
+        
+        if title_elem is None or category_elem is None:
+            continue
+            
+        # Only look at forecast entries
+        if category_elem.get('term') != 'Weather Forecasts':
+            continue
+        
+        title = title_elem.text
+        if not title:
+            continue
+        
+        # Check if this is the current period's forecast
+        title_lower = title.lower()
+        today_lower = today_name.lower()
+        
+        if is_night:
+            # Look for "today night" forecast
+            if today_lower in title_lower and 'night' in title_lower:
+                condition = extract_condition_from_forecast_title(title)
+                if condition:
+                    print(f"Found current night condition from: {title}")
+                    return condition
+        else:
+            # Look for today's daytime forecast (no "night" in title)
+            if today_lower in title_lower and 'night' not in title_lower:
+                condition = extract_condition_from_forecast_title(title)
+                if condition:
+                    print(f"Found current day condition from: {title}")
+                    return condition
+    
+    # Fallback: just use the first forecast entry's condition
+    for entry in entries:
+        title_elem = entry.find('atom:title', namespaces)
+        category_elem = entry.find('atom:category', namespaces)
+        
+        if title_elem is None or category_elem is None:
+            continue
+            
+        if category_elem.get('term') == 'Weather Forecasts':
+            condition = extract_condition_from_forecast_title(title_elem.text)
+            if condition:
+                print(f"Using first forecast condition from: {title_elem.text}")
+                return condition
+    
+    return None
+
 
 def parse_current_conditions(summary_text):
     """Parse the current conditions from RSS summary text."""
@@ -138,6 +197,7 @@ def parse_current_conditions(summary_text):
                 conditions['wind_gust_kmh'] = int(gust_match.group(1))
     
     return conditions
+
 
 def fetch_historical_temperatures():
     """Fetch 7-day historical temperature data from Environment Canada."""
@@ -272,6 +332,7 @@ def fetch_historical_temperatures():
         print(f"⚠ Warning: Could not fetch temperature history: {e}")
         return False
 
+
 def fetch_weather_data():
     """Fetch weather data from Environment Canada RSS feed."""
     try:
@@ -283,6 +344,11 @@ def fetch_weather_data():
         namespaces = {'atom': 'http://www.w3.org/2005/Atom'}
         entries = root.findall('.//atom:entry', namespaces)
         observation_time = None
+        
+        # First, get the current condition from the forecast
+        # (Environment Canada doesn't include condition text in Current Conditions!)
+        current_condition = get_current_forecast_condition(entries, namespaces)
+        print(f"Current condition from forecast: {current_condition}")
         
         for entry in entries:
             title_elem = entry.find('atom:title', namespaces)
@@ -299,15 +365,12 @@ def fetch_weather_data():
                     summary_text = summary_elem.text
                     
                     if summary_text:
-                        # Extract condition from the summary (first line before "Observed at")
-                        condition_text = extract_condition_from_summary(summary_text)
-                        
-                        # Parse the rest of the conditions
+                        # Parse the numeric conditions
                         conditions = parse_current_conditions(summary_text)
                         
-                        # Add the condition text
-                        if condition_text:
-                            conditions['condition'] = condition_text
+                        # Add the condition from the forecast
+                        if current_condition:
+                            conditions['condition'] = current_condition
                         
                         # Fetch historical temperatures
                         fetch_historical_temperatures()
@@ -348,6 +411,7 @@ def fetch_weather_data():
         import traceback
         traceback.print_exc()
         return False
+
 
 if __name__ == "__main__":
     success = fetch_weather_data()
