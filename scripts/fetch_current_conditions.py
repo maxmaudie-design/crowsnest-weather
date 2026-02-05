@@ -5,6 +5,7 @@ and save as JSON for the weather dashboard.
 
 This version fetches: temperature, conditions, wind, gusts, pressure, humidity, dewpoint
 Also fetches 7-day historical high/low temperatures from Environment Canada.
+Tracks daily max gust speed.
 """
 
 import requests
@@ -31,6 +32,96 @@ STATION_IDS_TO_TRY = [
 OUTPUT_DIR = "data"
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "current_conditions.json")
 HISTORY_FILE = os.path.join(OUTPUT_DIR, "temperature_history.json")
+DAILY_STATS_FILE = os.path.join(OUTPUT_DIR, "daily_stats.json")
+
+# Use Mountain Time for day boundaries (UTC-7)
+MT_OFFSET_HOURS = -7
+
+
+def get_local_date():
+    """Get current date in Mountain Time."""
+    utc_now = datetime.utcnow()
+    mt_now = utc_now + timedelta(hours=MT_OFFSET_HOURS)
+    return mt_now.date().isoformat()
+
+
+def load_daily_stats():
+    """Load daily stats from file, reset if it's a new day."""
+    today = get_local_date()
+    
+    try:
+        if os.path.exists(DAILY_STATS_FILE):
+            with open(DAILY_STATS_FILE, 'r') as f:
+                stats = json.load(f)
+                
+            # Check if it's still the same day
+            if stats.get('date') == today:
+                return stats
+            else:
+                print(f"New day detected ({today}), resetting daily stats")
+    except (json.JSONDecodeError, IOError) as e:
+        print(f"Could not load daily stats: {e}")
+    
+    # Return fresh stats for new day
+    return {
+        'date': today,
+        'max_gust_kmh': None,
+        'max_gust_time': None,
+        'max_wind_kmh': None,
+        'max_wind_time': None,
+        'high_temp': None,
+        'high_temp_time': None,
+        'low_temp': None,
+        'low_temp_time': None
+    }
+
+
+def save_daily_stats(stats):
+    """Save daily stats to file."""
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    with open(DAILY_STATS_FILE, 'w') as f:
+        json.dump(stats, f, indent=2)
+
+
+def update_daily_stats(conditions):
+    """Update daily statistics with current conditions."""
+    stats = load_daily_stats()
+    now_str = datetime.utcnow().strftime('%H:%M UTC')
+    updated = False
+    
+    # Track max gust
+    current_gust = conditions.get('wind_gust_kmh')
+    if current_gust is not None:
+        if stats['max_gust_kmh'] is None or current_gust > stats['max_gust_kmh']:
+            stats['max_gust_kmh'] = current_gust
+            stats['max_gust_time'] = now_str
+            print(f"New daily max gust: {current_gust} km/h")
+            updated = True
+    
+    # Track max wind speed
+    current_wind = conditions.get('wind_speed_kmh')
+    if current_wind is not None:
+        if stats['max_wind_kmh'] is None or current_wind > stats['max_wind_kmh']:
+            stats['max_wind_kmh'] = current_wind
+            stats['max_wind_time'] = now_str
+            updated = True
+    
+    # Track high/low temperature
+    current_temp = conditions.get('temperature')
+    if current_temp is not None:
+        if stats['high_temp'] is None or current_temp > stats['high_temp']:
+            stats['high_temp'] = current_temp
+            stats['high_temp_time'] = now_str
+            updated = True
+        if stats['low_temp'] is None or current_temp < stats['low_temp']:
+            stats['low_temp'] = current_temp
+            stats['low_temp_time'] = now_str
+            updated = True
+    
+    if updated:
+        save_daily_stats(stats)
+    
+    return stats
 
 
 def extract_condition_from_forecast_title(title):
@@ -134,6 +225,48 @@ def get_current_forecast_condition(entries, namespaces):
     return None
 
 
+def get_forecast_gust(entries, namespaces):
+    """
+    Extract forecast wind gust from the current forecast period.
+    Forecasts contain text like: "Wind west 60 km/h gusting to 80"
+    """
+    now = datetime.now()
+    current_hour = now.hour
+    is_night = current_hour >= 18 or current_hour < 6
+    
+    weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    today_name = weekdays[now.weekday()].lower()
+    
+    for entry in entries:
+        title_elem = entry.find('atom:title', namespaces)
+        category_elem = entry.find('atom:category', namespaces)
+        summary_elem = entry.find('atom:summary', namespaces)
+        
+        if category_elem is None or category_elem.get('term') != 'Weather Forecasts':
+            continue
+        
+        if title_elem is None or summary_elem is None:
+            continue
+        
+        title = title_elem.text.lower() if title_elem.text else ''
+        
+        # Check if this is the current period
+        matches = False
+        if is_night and today_name in title and 'night' in title:
+            matches = True
+        elif not is_night and today_name in title and 'night' not in title:
+            matches = True
+        
+        if matches and summary_elem.text:
+            summary = html_module.unescape(summary_elem.text)
+            # Look for "gusting to XX" pattern
+            gust_match = re.search(r'gust(?:ing)?\s+(?:to\s+)?(\d+)', summary, re.IGNORECASE)
+            if gust_match:
+                return int(gust_match.group(1))
+    
+    return None
+
+
 def parse_current_conditions(summary_text):
     """Parse the current conditions from RSS summary text."""
     print(f"Raw summary text: {summary_text[:200]}...")  # Debug
@@ -191,7 +324,7 @@ def parse_current_conditions(summary_text):
             if dir_match:
                 conditions['wind_direction'] = dir_match.group(1).upper()
             
-            # Gusts
+            # Gusts from current conditions
             gust_match = re.search(r'gust(?:s|ing)?(?:\s+to)?\s+(\d+)(?:\s*km/h)?', wind_text, re.IGNORECASE)
             if gust_match:
                 conditions['wind_gust_kmh'] = int(gust_match.group(1))
@@ -350,6 +483,10 @@ def fetch_weather_data():
         current_condition = get_current_forecast_condition(entries, namespaces)
         print(f"Current condition from forecast: {current_condition}")
         
+        # Get forecast gust if current conditions don't have it
+        forecast_gust = get_forecast_gust(entries, namespaces)
+        print(f"Forecast gust: {forecast_gust}")
+        
         for entry in entries:
             title_elem = entry.find('atom:title', namespaces)
             if title_elem is not None and 'Current Conditions' in title_elem.text:
@@ -372,6 +509,18 @@ def fetch_weather_data():
                         if current_condition:
                             conditions['condition'] = current_condition
                         
+                        # If no gust in current conditions, use forecast gust
+                        if 'wind_gust_kmh' not in conditions and forecast_gust:
+                            conditions['wind_gust_kmh'] = forecast_gust
+                            print(f"Using forecast gust: {forecast_gust} km/h")
+                        
+                        # Update daily stats and get current daily max gust
+                        daily_stats = update_daily_stats(conditions)
+                        
+                        # Add daily max gust to conditions
+                        if daily_stats.get('max_gust_kmh') is not None:
+                            conditions['daily_max_gust_kmh'] = daily_stats['max_gust_kmh']
+                        
                         # Fetch historical temperatures
                         fetch_historical_temperatures()
                         
@@ -381,6 +530,13 @@ def fetch_weather_data():
                             "source": "Environment Canada",
                             "location": "Crowsnest Pass, AB",
                             "conditions": conditions,
+                            "daily_stats": {
+                                "date": daily_stats.get('date'),
+                                "max_gust_kmh": daily_stats.get('max_gust_kmh'),
+                                "max_gust_time": daily_stats.get('max_gust_time'),
+                                "high_temp": daily_stats.get('high_temp'),
+                                "low_temp": daily_stats.get('low_temp')
+                            },
                             "observation_time": observation_time or "Unknown",
                             "fetch_time_utc": datetime.utcnow().isoformat() + 'Z'
                         }
@@ -395,7 +551,9 @@ def fetch_weather_data():
                         print(f"  Temperature: {conditions.get('temperature', 'N/A')}°C")
                         print(f"  Wind: {conditions.get('wind_direction', 'N/A')} {conditions.get('wind_speed_kmh', 'N/A')} km/h")
                         if 'wind_gust_kmh' in conditions:
-                            print(f"  Gusts: {conditions['wind_gust_kmh']} km/h")
+                            print(f"  Current Gust: {conditions['wind_gust_kmh']} km/h")
+                        if daily_stats.get('max_gust_kmh'):
+                            print(f"  Daily Max Gust: {daily_stats['max_gust_kmh']} km/h")
                         print(f"  Pressure: {conditions.get('pressure_kpa', 'N/A')} kPa")
                         return True
                     else:
