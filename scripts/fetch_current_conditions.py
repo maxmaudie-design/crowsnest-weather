@@ -21,11 +21,7 @@ RSS_URL = "https://weather.gc.ca/rss/weather/49.631_-114.693_e.xml"
 # CROWSNEST PASS STATION
 # Climate Identifier: 3051R4R
 # Coordinates: 49.627525, -114.48195
-# You can find the station ID by searching here:
-# https://climate.weather.gc.ca/historical_data/search_historic_data_e.html
-# Search for "CROWSNEST" in Alberta to get the station ID
 
-# Common station IDs in the area (try each to find which has recent data):
 STATION_IDS_TO_TRY = [
     "2695",   # CROWSNEST (try this first - Climate ID 3051R4R)
     "48844",  # PINCHER CREEK (backup)
@@ -39,7 +35,10 @@ HISTORY_FILE = os.path.join(OUTPUT_DIR, "temperature_history.json")
 def extract_condition_from_summary(summary_text):
     """
     Extract weather condition from the summary text.
-    The summary usually starts with the condition like "Mainly cloudy. Low minus 6."
+    The summary structure is typically:
+    - First line/sentence: Weather condition (e.g., "Mainly cloudy.")
+    - Second line: "Observed at: Station Time"
+    - Rest: Detailed conditions
     """
     if not summary_text:
         return None
@@ -50,19 +49,28 @@ def extract_condition_from_summary(summary_text):
     # Remove HTML tags
     text = re.sub(r'<[^>]+>', ' ', text)
     
-    # The condition is usually the first sentence
-    # Look for patterns like "Mainly cloudy.", "Clear.", "A few clouds.", etc.
-    # Stop at the first period or "Temperature" keyword
+    # Split into lines
+    lines = [line.strip() for line in text.split('\n') if line.strip()]
     
-    # Split by period or Temperature keyword
-    parts = re.split(r'\.|Temperature', text, maxsplit=1)
-    if parts:
-        condition = parts[0].strip()
-        # Clean up extra whitespace
-        condition = re.sub(r'\s+', ' ', condition)
+    # The condition is usually the FIRST line, before "Observed at"
+    for line in lines:
+        # Skip empty lines
+        if not line:
+            continue
+            
+        # Skip lines that start with "Observed at", "Temperature", "Condition", etc.
+        if re.match(r'^(Observed at|Temperature|Condition|Pressure|Humidity|Dewpoint|Wind)', line, re.IGNORECASE):
+            continue
+        
+        # Clean up the line
+        condition = line.strip()
+        
+        # Remove any trailing period
+        condition = condition.rstrip('.')
         
         # Make sure it's not empty and not just a number
         if condition and not re.match(r'^[\d\s\.\-°C]+$', condition):
+            print(f"Extracted condition: '{condition}'")
             return condition
     
     return None
@@ -73,21 +81,19 @@ def parse_current_conditions(summary_text):
     
     # Unescape HTML entities (&deg; -> °, etc.)
     summary_text = html_module.unescape(summary_text)
-    print(f"After unescape: {summary_text[:200]}...")  # Debug
     
     # Remove HTML tags but keep the text
     summary_text = re.sub(r'<[^>]+>', ' ', summary_text)
-    print(f"After tag removal: {summary_text[:200]}...")  # Debug
     
     conditions = {}
     
-    # Temperature - be more flexible with format
+    # Temperature
     temp_match = re.search(r'Temperature[:\s]+(-?\d+\.?\d*)', summary_text, re.IGNORECASE)
     if temp_match:
         conditions['temperature'] = float(temp_match.group(1))
         print(f"Found temperature: {conditions['temperature']}")
     
-    # Pressure and Tendency (format: "103.8 kPa rising")
+    # Pressure and Tendency
     press_match = re.search(r'Pressure[^:]*[:\s]+(\d+\.?\d*)\s*kPa\s*(\w+)?', summary_text, re.IGNORECASE)
     if press_match:
         conditions['pressure_kpa'] = float(press_match.group(1))
@@ -108,74 +114,54 @@ def parse_current_conditions(summary_text):
         conditions['dewpoint'] = float(dew_match.group(1))
         print(f"Found dewpoint: {conditions['dewpoint']}")
     
-    # Wind - handle "calm" and numeric speeds, plus gusts
+    # Wind
     wind_match = re.search(r'Wind[:\s]+(.+?)(?=Air Quality|Pressure|Humidity|Dewpoint|Observed|$)', summary_text, re.IGNORECASE | re.DOTALL)
     if wind_match:
         wind_text = wind_match.group(1).strip()
         print(f"Wind text: {wind_text}")
         
-        # Check for calm
         if 'calm' in wind_text.lower():
             conditions['wind_speed_kmh'] = 0
             conditions['wind_direction'] = 'CALM'
-            print("Wind is calm")
         else:
-            # Try to extract direction and speed
             speed_match = re.search(r'(\d+)\s*km/h', wind_text, re.IGNORECASE)
             dir_match = re.search(r'\b([NSEW]{1,3})\b', wind_text, re.IGNORECASE)
             
             if speed_match:
                 conditions['wind_speed_kmh'] = int(speed_match.group(1))
-                print(f"Found wind speed: {conditions['wind_speed_kmh']}")
             if dir_match:
                 conditions['wind_direction'] = dir_match.group(1).upper()
-                print(f"Found wind direction: {conditions['wind_direction']}")
             
-            # Look for gust information
-            # Formats: "gust 40 km/h", "gusting to 45 km/h", "gusts 50"
+            # Gusts
             gust_match = re.search(r'gust(?:s|ing)?(?:\s+to)?\s+(\d+)(?:\s*km/h)?', wind_text, re.IGNORECASE)
             if gust_match:
                 conditions['wind_gust_kmh'] = int(gust_match.group(1))
-                print(f"Found wind gust: {conditions['wind_gust_kmh']}")
     
     return conditions
 
 def fetch_historical_temperatures():
-    """
-    Fetch 7-day historical temperature data from Environment Canada.
-    Uses the CSV download format for Crowsnest Pass station.
-    Station: CROWSNEST (Climate ID: 3051R4R)
-    """
+    """Fetch 7-day historical temperature data from Environment Canada."""
     try:
         print("Fetching 7-day temperature history from Environment Canada...")
         
         history_records = []
         today = datetime.now()
         
-        # Try multiple station IDs to find which one has recent data
         for station_id in STATION_IDS_TO_TRY:
-            print(f"Trying station ID: {station_id}")
-            
-            # Try to get the current month and previous month if needed
-            for month_offset in range(0, 2):  # Current month and previous month
+            for month_offset in range(0, 2):
                 target_date = today - timedelta(days=30 * month_offset)
                 year = target_date.year
                 month = target_date.month
                 
-                # Build the CSV download URL
                 csv_url = f"https://climate.weather.gc.ca/climate_data/bulk_data_e.html?format=csv&stationID={station_id}&Year={year}&Month={month}&timeframe=2&submit=Download+Data"
-                
-                print(f"  Fetching data for {year}-{month:02d}...")
                 
                 try:
                     response = requests.get(csv_url, timeout=15)
                     if response.status_code != 200:
                         continue
                     
-                    # Parse CSV
                     lines = response.text.strip().split('\n')
                     
-                    # Find header row (starts with "Date/Time")
                     header_idx = None
                     for i, line in enumerate(lines):
                         if 'Date/Time' in line and ('Max Temp' in line or 'Min Temp' in line):
@@ -185,9 +171,7 @@ def fetch_historical_temperatures():
                     if header_idx is None:
                         continue
                     
-                    # Parse header to find column indices
                     header_line = lines[header_idx]
-                    # Handle both quoted and unquoted CSV
                     if '","' in header_line:
                         header = header_line.strip('"').split('","')
                     else:
@@ -195,7 +179,6 @@ def fetch_historical_temperatures():
                     
                     try:
                         date_idx = header.index('Date/Time')
-                        # Find max and min temp columns (they might have different exact names)
                         max_temp_idx = None
                         min_temp_idx = None
                         for i, col in enumerate(header):
@@ -208,16 +191,13 @@ def fetch_historical_temperatures():
                             continue
                             
                     except ValueError:
-                        print("  Could not find required columns in CSV")
                         continue
                     
-                    # Parse data rows (starting after header)
                     records_found = 0
                     for line in lines[header_idx + 1:]:
                         if not line.strip():
                             continue
                         
-                        # Parse CSV line (handle quoted fields)
                         if '","' in line:
                             parts = line.strip('"').split('","')
                         else:
@@ -230,15 +210,11 @@ def fetch_historical_temperatures():
                         max_temp_str = parts[max_temp_idx]
                         min_temp_str = parts[min_temp_idx]
                         
-                        # Skip if temps are missing
                         if not max_temp_str or not min_temp_str or max_temp_str == '' or min_temp_str == '':
                             continue
                         
                         try:
-                            # Parse date (format: YYYY-MM-DD)
                             record_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-                            
-                            # Only keep last 8 days (including today, even if incomplete)
                             days_ago = (today.date() - record_date).days
                             if days_ago < 0 or days_ago > 8:
                                 continue
@@ -260,19 +236,16 @@ def fetch_historical_temperatures():
                         print(f"  Found {records_found} records from station {station_id}")
                 
                 except requests.exceptions.RequestException as e:
-                    print(f"  Error fetching month {year}-{month}: {e}")
                     continue
             
-            # If we found any records with this station, stop trying other stations
             if history_records:
                 print(f"✓ Using station ID {station_id}")
                 break
         
         if not history_records:
-            print("⚠ No historical temperature data available from any station")
+            print("⚠ No historical temperature data available")
             return False
         
-        # Remove duplicates and sort by date (newest first)
         seen_dates = set()
         unique_records = []
         for record in history_records:
@@ -281,8 +254,6 @@ def fetch_historical_temperatures():
                 unique_records.append(record)
         
         unique_records.sort(key=lambda x: x['date'], reverse=True)
-        
-        # Keep only 7 most recent (excluding today if incomplete)
         unique_records = unique_records[:7]
         
         history_data = {
@@ -291,7 +262,6 @@ def fetch_historical_temperatures():
             "source": "Environment Canada - Crowsnest Pass Station"
         }
         
-        # Save to file
         with open(HISTORY_FILE, 'w') as f:
             json.dump(history_data, f, indent=2)
         
@@ -300,8 +270,6 @@ def fetch_historical_temperatures():
             
     except Exception as e:
         print(f"⚠ Warning: Could not fetch temperature history: {e}")
-        import traceback
-        traceback.print_exc()
         return False
 
 def fetch_weather_data():
@@ -311,13 +279,8 @@ def fetch_weather_data():
         response = requests.get(RSS_URL, timeout=10)
         response.raise_for_status()
         
-        # Parse XML
         root = ET.fromstring(response.content)
-        
-        # Find namespace
         namespaces = {'atom': 'http://www.w3.org/2005/Atom'}
-        
-        # Find current conditions entry
         entries = root.findall('.//atom:entry', namespaces)
         observation_time = None
         
@@ -336,14 +299,13 @@ def fetch_weather_data():
                     summary_text = summary_elem.text
                     
                     if summary_text:
-                        # Extract condition from the summary (first sentence)
+                        # Extract condition from the summary (first line before "Observed at")
                         condition_text = extract_condition_from_summary(summary_text)
-                        print(f"Extracted condition from summary: {condition_text}")
                         
                         # Parse the rest of the conditions
                         conditions = parse_current_conditions(summary_text)
                         
-                        # Add the condition text extracted from the summary
+                        # Add the condition text
                         if condition_text:
                             conditions['condition'] = condition_text
                         
@@ -360,10 +322,8 @@ def fetch_weather_data():
                             "fetch_time_utc": datetime.utcnow().isoformat() + 'Z'
                         }
                         
-                        # Ensure output directory exists
                         os.makedirs(OUTPUT_DIR, exist_ok=True)
                         
-                        # Save to JSON
                         with open(OUTPUT_FILE, 'w') as f:
                             json.dump(full_data, f, indent=2)
                         
@@ -374,8 +334,6 @@ def fetch_weather_data():
                         if 'wind_gust_kmh' in conditions:
                             print(f"  Gusts: {conditions['wind_gust_kmh']} km/h")
                         print(f"  Pressure: {conditions.get('pressure_kpa', 'N/A')} kPa")
-                        print(f"  Humidity: {conditions.get('humidity_percent', 'N/A')}%")
-                        print(f"  Dewpoint: {conditions.get('dewpoint', 'N/A')}°C")
                         return True
                     else:
                         print("✗ Summary text was empty")
@@ -385,12 +343,6 @@ def fetch_weather_data():
         print("✗ Could not find current conditions in RSS feed")
         return False
         
-    except requests.exceptions.RequestException as e:
-        print(f"✗ Error fetching RSS feed: {e}")
-        return False
-    except ET.ParseError as e:
-        print(f"✗ Error parsing XML: {e}")
-        return False
     except Exception as e:
         print(f"✗ Unexpected error: {e}")
         import traceback
