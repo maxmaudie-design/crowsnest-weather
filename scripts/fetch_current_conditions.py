@@ -4,7 +4,7 @@ Fetch complete current weather conditions from Environment Canada RSS feed
 and save as JSON for the weather dashboard.
 
 This version fetches: temperature, conditions, wind, gusts, pressure, humidity, dewpoint
-Also fetches 7-day historical high/low temperatures from Environment Canada.
+Tracks daily high/low temps and builds a rolling 7-day history.
 Tracks daily max gust speed.
 """
 
@@ -18,16 +18,6 @@ import html as html_module
 
 # Configuration
 RSS_URL = "https://weather.gc.ca/rss/weather/49.631_-114.693_e.xml"
-
-# CROWSNEST PASS STATION
-# Climate Identifier: 3051R4R
-# Coordinates: 49.627525, -114.48195
-
-STATION_IDS_TO_TRY = [
-    "2695",   # CROWSNEST (try this first - Climate ID 3051R4R)
-    "48844",  # PINCHER CREEK (backup)
-    "2696",   # Possible alternate Crowsnest station
-]
 
 OUTPUT_DIR = "data"
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "current_conditions.json")
@@ -45,8 +35,65 @@ def get_local_date():
     return mt_now.date().isoformat()
 
 
+def load_temperature_history():
+    """Load temperature history from file."""
+    try:
+        if os.path.exists(HISTORY_FILE):
+            with open(HISTORY_FILE, 'r') as f:
+                return json.load(f)
+    except (json.JSONDecodeError, IOError) as e:
+        print(f"Could not load temperature history: {e}")
+    
+    return {
+        "daily_records": [],
+        "last_updated": None,
+        "source": "Self-tracked from Environment Canada observations"
+    }
+
+
+def save_temperature_history(history):
+    """Save temperature history to file."""
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    history["last_updated"] = datetime.utcnow().isoformat() + 'Z'
+    with open(HISTORY_FILE, 'w') as f:
+        json.dump(history, f, indent=2)
+
+
+def archive_yesterday_to_history(yesterday_stats):
+    """Archive yesterday's high/low to the 7-day rolling history."""
+    if not yesterday_stats:
+        return
+    
+    yesterday_date = yesterday_stats.get('date')
+    high_temp = yesterday_stats.get('high_temp')
+    low_temp = yesterday_stats.get('low_temp')
+    
+    # Only archive if we have both high and low
+    if yesterday_date and high_temp is not None and low_temp is not None:
+        history = load_temperature_history()
+        
+        # Check if this date is already in history
+        existing_dates = [r['date'] for r in history['daily_records']]
+        if yesterday_date not in existing_dates:
+            # Add yesterday's record
+            history['daily_records'].append({
+                "date": yesterday_date,
+                "high": high_temp,
+                "low": low_temp
+            })
+            
+            # Sort by date descending (newest first)
+            history['daily_records'].sort(key=lambda x: x['date'], reverse=True)
+            
+            # Keep only the most recent 7 days
+            history['daily_records'] = history['daily_records'][:7]
+            
+            save_temperature_history(history)
+            print(f"✓ Archived {yesterday_date}: High {high_temp}°C, Low {low_temp}°C")
+
+
 def load_daily_stats():
-    """Load daily stats from file, reset if it's a new day."""
+    """Load daily stats from file, archive and reset if it's a new day."""
     today = get_local_date()
     
     try:
@@ -58,7 +105,9 @@ def load_daily_stats():
             if stats.get('date') == today:
                 return stats
             else:
-                print(f"New day detected ({today}), resetting daily stats")
+                # New day - archive yesterday's data to history before resetting
+                print(f"New day detected ({today}), archiving yesterday's stats...")
+                archive_yesterday_to_history(stats)
     except (json.JSONDecodeError, IOError) as e:
         print(f"Could not load daily stats: {e}")
     
@@ -332,140 +381,6 @@ def parse_current_conditions(summary_text):
     return conditions
 
 
-def fetch_historical_temperatures():
-    """Fetch 7-day historical temperature data from Environment Canada."""
-    try:
-        print("Fetching 7-day temperature history from Environment Canada...")
-        
-        history_records = []
-        today = datetime.now()
-        
-        for station_id in STATION_IDS_TO_TRY:
-            for month_offset in range(0, 2):
-                target_date = today - timedelta(days=30 * month_offset)
-                year = target_date.year
-                month = target_date.month
-                
-                csv_url = f"https://climate.weather.gc.ca/climate_data/bulk_data_e.html?format=csv&stationID={station_id}&Year={year}&Month={month}&timeframe=2&submit=Download+Data"
-                
-                try:
-                    response = requests.get(csv_url, timeout=15)
-                    if response.status_code != 200:
-                        continue
-                    
-                    lines = response.text.strip().split('\n')
-                    
-                    header_idx = None
-                    for i, line in enumerate(lines):
-                        if 'Date/Time' in line and ('Max Temp' in line or 'Min Temp' in line):
-                            header_idx = i
-                            break
-                    
-                    if header_idx is None:
-                        continue
-                    
-                    header_line = lines[header_idx]
-                    if '","' in header_line:
-                        header = header_line.strip('"').split('","')
-                    else:
-                        header = [h.strip('"') for h in header_line.split(',')]
-                    
-                    try:
-                        date_idx = header.index('Date/Time')
-                        max_temp_idx = None
-                        min_temp_idx = None
-                        for i, col in enumerate(header):
-                            if 'Max Temp' in col:
-                                max_temp_idx = i
-                            if 'Min Temp' in col:
-                                min_temp_idx = i
-                        
-                        if max_temp_idx is None or min_temp_idx is None:
-                            continue
-                            
-                    except ValueError:
-                        continue
-                    
-                    records_found = 0
-                    for line in lines[header_idx + 1:]:
-                        if not line.strip():
-                            continue
-                        
-                        if '","' in line:
-                            parts = line.strip('"').split('","')
-                        else:
-                            parts = [p.strip('"') for p in line.split(',')]
-                            
-                        if len(parts) <= max(date_idx, max_temp_idx, min_temp_idx):
-                            continue
-                        
-                        date_str = parts[date_idx]
-                        max_temp_str = parts[max_temp_idx]
-                        min_temp_str = parts[min_temp_idx]
-                        
-                        if not max_temp_str or not min_temp_str or max_temp_str == '' or min_temp_str == '':
-                            continue
-                        
-                        try:
-                            record_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-                            days_ago = (today.date() - record_date).days
-                            if days_ago < 0 or days_ago > 8:
-                                continue
-                            
-                            max_temp = float(max_temp_str)
-                            min_temp = float(min_temp_str)
-                            
-                            history_records.append({
-                                "date": record_date.isoformat(),
-                                "high": max_temp,
-                                "low": min_temp
-                            })
-                            records_found += 1
-                            
-                        except (ValueError, AttributeError) as e:
-                            continue
-                    
-                    if records_found > 0:
-                        print(f"  Found {records_found} records from station {station_id}")
-                
-                except requests.exceptions.RequestException as e:
-                    continue
-            
-            if history_records:
-                print(f"✓ Using station ID {station_id}")
-                break
-        
-        if not history_records:
-            print("⚠ No historical temperature data available")
-            return False
-        
-        seen_dates = set()
-        unique_records = []
-        for record in history_records:
-            if record['date'] not in seen_dates:
-                seen_dates.add(record['date'])
-                unique_records.append(record)
-        
-        unique_records.sort(key=lambda x: x['date'], reverse=True)
-        unique_records = unique_records[:7]
-        
-        history_data = {
-            "daily_records": unique_records,
-            "last_updated": datetime.utcnow().isoformat() + 'Z',
-            "source": "Environment Canada - Crowsnest Pass Station"
-        }
-        
-        with open(HISTORY_FILE, 'w') as f:
-            json.dump(history_data, f, indent=2)
-        
-        print(f"✓ Fetched {len(unique_records)} days of temperature history")
-        return True
-            
-    except Exception as e:
-        print(f"⚠ Warning: Could not fetch temperature history: {e}")
-        return False
-
-
 def fetch_weather_data():
     """Fetch weather data from Environment Canada RSS feed."""
     try:
@@ -515,14 +430,15 @@ def fetch_weather_data():
                             print(f"Using forecast gust: {forecast_gust} km/h")
                         
                         # Update daily stats and get current daily max gust
+                        # This also archives yesterday's data if it's a new day
                         daily_stats = update_daily_stats(conditions)
                         
                         # Add daily max gust to conditions
                         if daily_stats.get('max_gust_kmh') is not None:
                             conditions['daily_max_gust_kmh'] = daily_stats['max_gust_kmh']
                         
-                        # Fetch historical temperatures
-                        fetch_historical_temperatures()
+                        # Load temperature history for output
+                        history = load_temperature_history()
                         
                         # Build full data structure
                         full_data = {
@@ -555,6 +471,7 @@ def fetch_weather_data():
                         if daily_stats.get('max_gust_kmh'):
                             print(f"  Daily Max Gust: {daily_stats['max_gust_kmh']} km/h")
                         print(f"  Pressure: {conditions.get('pressure_kpa', 'N/A')} kPa")
+                        print(f"  Temperature History: {len(history.get('daily_records', []))} days")
                         return True
                     else:
                         print("✗ Summary text was empty")
