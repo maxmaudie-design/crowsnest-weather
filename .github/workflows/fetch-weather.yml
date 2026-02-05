@@ -26,7 +26,7 @@ jobs:
         
     - name: Install dependencies
       run: |
-        pip install requests
+        pip install requests env-canada aiohttp
         
     - name: Fetch weather data
       run: python scripts/fetch_current_conditions.py
