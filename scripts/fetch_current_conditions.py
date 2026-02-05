@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """
 Fetch complete current weather conditions from Environment Canada RSS feed
-and historical data using the env_canada package.
+and historical data from the MSC Datamart.
 
 This version fetches: temperature, conditions, wind, gusts, pressure, humidity, dewpoint
-Uses env_canada package for proper historical data from Environment Canada.
+Uses Environment Canada's MSC Datamart for historical daily data.
 """
 
 import requests
 import xml.etree.ElementTree as ET
 import json
 import re
-import asyncio
+import csv
+import io
 from datetime import datetime, timedelta
 import os
 import html as html_module
@@ -19,9 +20,13 @@ import html as html_module
 # Configuration
 RSS_URL = "https://weather.gc.ca/rss/weather/49.631_-114.693_e.xml"
 
-# Crowsnest Pass coordinates
-CROWSNEST_LAT = 49.631
-CROWSNEST_LON = -114.693
+# Crowsnest Pass station - Climate ID: 3051R4R
+CLIMATE_ID = "3051R4R"
+PROVINCE = "AB"
+
+# MSC Datamart URL for daily climate data
+# Pattern: https://dd.weather.gc.ca/today/climate/observations/daily/csv/{PROVINCE}/climate_daily_{PROVINCE}_{CLIMATE_ID}_{YEAR}_P1D.csv
+DATAMART_BASE = "https://dd.weather.gc.ca/today/climate/observations/daily/csv"
 
 OUTPUT_DIR = "data"
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "current_conditions.json")
@@ -39,82 +44,76 @@ def get_local_date():
     return mt_now.date().isoformat()
 
 
-async def fetch_historical_temperatures_ec():
-    """Fetch 7-day historical temperature data using env_canada package."""
+def fetch_historical_temperatures():
+    """Fetch 7-day historical temperature data from MSC Datamart."""
     try:
-        from env_canada import ECHistorical
-        from env_canada.ec_historical import get_historical_stations
+        print("Fetching 7-day temperature history from MSC Datamart...")
         
-        print("Fetching 7-day temperature history using env_canada...")
-        
-        # Find nearest station to Crowsnest Pass
-        coordinates = [CROWSNEST_LAT, CROWSNEST_LON]
-        stations = await get_historical_stations(coordinates, radius=100, limit=10)
-        
-        if not stations:
-            print("⚠ No historical stations found near Crowsnest Pass")
-            return None
-        
-        # Get the closest station
-        station_id = stations[0]['station_id']
-        station_name = stations[0].get('station_name', 'Unknown')
-        print(f"Using station: {station_name} (ID: {station_id})")
-        
-        # Get current and previous month data
         today = datetime.now()
         history_records = []
         
-        for month_offset in range(2):
-            target_date = today - timedelta(days=30 * month_offset)
-            year = target_date.year
-            month = target_date.month
+        # Fetch current year and possibly previous year if we're early in January
+        years_to_fetch = [today.year]
+        if today.month == 1:
+            years_to_fetch.append(today.year - 1)
+        
+        for year in years_to_fetch:
+            csv_url = f"{DATAMART_BASE}/{PROVINCE}/climate_daily_{PROVINCE}_{CLIMATE_ID}_{year}_P1D.csv"
+            print(f"  Trying: {csv_url}")
             
             try:
-                ec_hist = ECHistorical(
-                    station_id=station_id,
-                    year=year,
-                    month=month,
-                    language="english",
-                    format="csv"
-                )
-                await ec_hist.update()
+                response = requests.get(csv_url, timeout=15)
+                if response.status_code != 200:
+                    print(f"  HTTP {response.status_code} for {year}")
+                    continue
                 
-                if ec_hist.station_data:
-                    # Parse CSV data
-                    import io
-                    import csv
-                    
-                    reader = csv.DictReader(io.StringIO(ec_hist.station_data))
-                    for row in reader:
-                        try:
-                            date_str = row.get('Date/Time', row.get('Date/Time (LST)', ''))
-                            max_temp = row.get('Max Temp (°C)', row.get('Max Temp', ''))
-                            min_temp = row.get('Min Temp (°C)', row.get('Min Temp', ''))
-                            
-                            if not date_str or not max_temp or not min_temp:
-                                continue
-                            
-                            record_date = datetime.strptime(date_str.split()[0], '%Y-%m-%d').date()
-                            days_ago = (today.date() - record_date).days
-                            
-                            if 0 < days_ago <= 7:
-                                history_records.append({
-                                    "date": record_date.isoformat(),
-                                    "high": float(max_temp),
-                                    "low": float(min_temp)
-                                })
-                        except (ValueError, KeyError) as e:
+                # Parse CSV
+                reader = csv.DictReader(io.StringIO(response.text))
+                
+                for row in reader:
+                    try:
+                        # Get date - could be LOCAL_DATE or Date/Time
+                        date_str = row.get('LOCAL_DATE', row.get('Date/Time', row.get('LOCAL_DATE (UTC)', '')))
+                        if not date_str:
                             continue
+                        
+                        # Get max/min temps - try different column names
+                        max_temp_str = row.get('MAX_TEMPERATURE', row.get('Max Temp (°C)', row.get('MAX_TEMP', '')))
+                        min_temp_str = row.get('MIN_TEMPERATURE', row.get('Min Temp (°C)', row.get('MIN_TEMP', '')))
+                        
+                        if not max_temp_str or not min_temp_str:
+                            continue
+                        
+                        # Parse date
+                        try:
+                            record_date = datetime.strptime(date_str.split()[0].split('T')[0], '%Y-%m-%d').date()
+                        except:
+                            continue
+                        
+                        days_ago = (today.date() - record_date).days
+                        
+                        # Get records from past 7 days (not including today)
+                        if 1 <= days_ago <= 7:
+                            history_records.append({
+                                "date": record_date.isoformat(),
+                                "high": float(max_temp_str),
+                                "low": float(min_temp_str)
+                            })
                             
-            except Exception as e:
-                print(f"  Warning: Could not fetch {year}-{month:02d}: {e}")
+                    except (ValueError, KeyError) as e:
+                        continue
+                
+                print(f"  Found {len(history_records)} records from {year}")
+                        
+            except requests.exceptions.RequestException as e:
+                print(f"  Error fetching {year}: {e}")
                 continue
         
         if not history_records:
-            print("⚠ No historical records found")
+            print("⚠ No historical records found from MSC Datamart")
             return None
         
-        # Remove duplicates and sort
+        # Remove duplicates and sort by date descending
         seen_dates = set()
         unique_records = []
         for record in history_records:
@@ -128,20 +127,19 @@ async def fetch_historical_temperatures_ec():
         history_data = {
             "daily_records": unique_records,
             "last_updated": datetime.utcnow().isoformat() + 'Z',
-            "source": f"Environment Canada - {station_name}",
-            "station_id": station_id
+            "source": f"Environment Canada MSC Datamart - Station {CLIMATE_ID}"
         }
         
         os.makedirs(OUTPUT_DIR, exist_ok=True)
         with open(HISTORY_FILE, 'w') as f:
             json.dump(history_data, f, indent=2)
         
-        print(f"✓ Fetched {len(unique_records)} days of temperature history")
+        print(f"✓ Saved {len(unique_records)} days of temperature history")
+        for r in unique_records:
+            print(f"    {r['date']}: High {r['high']}°C, Low {r['low']}°C")
+        
         return history_data
         
-    except ImportError:
-        print("⚠ env_canada package not available, skipping historical data")
-        return None
     except Exception as e:
         print(f"⚠ Error fetching historical data: {e}")
         import traceback
@@ -392,7 +390,7 @@ def parse_current_conditions(summary_text):
     return conditions
 
 
-async def fetch_weather_data():
+def fetch_weather_data():
     """Fetch weather data from Environment Canada RSS feed."""
     try:
         print(f"Fetching weather data from {RSS_URL}...")
@@ -439,8 +437,8 @@ async def fetch_weather_data():
                         if daily_stats.get('max_gust_kmh') is not None:
                             conditions['daily_max_gust_kmh'] = daily_stats['max_gust_kmh']
                         
-                        # Fetch historical temperatures from Environment Canada
-                        history_data = await fetch_historical_temperatures_ec()
+                        # Fetch historical temperatures from MSC Datamart
+                        history_data = fetch_historical_temperatures()
                         
                         full_data = {
                             "timestamp": datetime.utcnow().isoformat() + 'Z',
@@ -491,5 +489,5 @@ async def fetch_weather_data():
 
 
 if __name__ == "__main__":
-    success = asyncio.run(fetch_weather_data())
+    success = fetch_weather_data()
     exit(0 if success else 1)
