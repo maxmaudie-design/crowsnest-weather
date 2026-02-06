@@ -112,7 +112,7 @@
     </div>
 
     <script>
-        // Version 2.1 - Added record years to all displays
+        // Version 2.2 - Fixed forecast records timing
         const CONFIG = {
             WEATHER_JSON_URL: './data/current_conditions.json',
             HISTORY_JSON_URL: './data/temperature_history.json',
@@ -128,10 +128,9 @@
         const formatTempInt = (t) => t == null ? '--' : Math.round(t);
         const getDateKey = (d) => `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
         
-        // Parse date string without timezone issues
         function parseLocalDate(s) {
             const [y, m, d] = s.split('-').map(Number);
-            return new Date(y, m - 1, d, 12, 0, 0); // noon to avoid any DST issues
+            return new Date(y, m - 1, d, 12, 0, 0);
         }
 
         function isYesterday(date) {
@@ -184,10 +183,10 @@
                     }
                 });
                 forecastData = combineDayNight(forecasts);
-                displayForecast();
+                // Don't display here - wait for records to load
             } catch (e) {
                 console.error('Forecast error:', e);
-                document.getElementById('forecast-card').innerHTML = `<h2>7-Day Forecast</h2><div class="error">Unable to load. <a href="https://weather.gc.ca/en/location/index.html?coords=49.631,-114.693" target="_blank">View at EC</a></div>`;
+                forecastData = null;
             }
         }
 
@@ -212,7 +211,7 @@
 
         function displayForecast() {
             if (!forecastData?.length) {
-                document.getElementById('forecast-card').innerHTML = `<h2>7-Day Forecast</h2><div class="error">No data</div>`;
+                document.getElementById('forecast-card').innerHTML = `<h2>7-Day Forecast</h2><div class="error">Unable to load. <a href="https://weather.gc.ca/en/location/index.html?coords=49.631,-114.693" target="_blank">View at EC</a></div>`;
                 return;
             }
             const today = new Date();
@@ -246,7 +245,6 @@
                 const url = CONFIG.RECORDS_JSON_URL + '?v=' + Date.now();
                 let r = await fetch(url).catch(() => fetch(CONFIG.GITHUB_RAW_URL + 'daily_records.json?v=' + Date.now()));
                 if (r.ok) recordsData = await r.json();
-                console.log('Records loaded:', Object.keys(recordsData?.records_by_day || {}).length, 'days');
             } catch (e) { console.log('Records unavailable:', e); }
         }
 
@@ -254,15 +252,13 @@
             try {
                 const url = CONFIG.HISTORY_JSON_URL + '?v=' + Date.now();
                 let r = await fetch(url).catch(() => fetch(CONFIG.GITHUB_RAW_URL + 'temperature_history.json?v=' + Date.now()));
-                if (r.ok) {
-                    historyData = await r.json();
-                    console.log('History loaded:', historyData?.daily_records?.length, 'days:', historyData?.daily_records?.map(d => d.date).join(', '));
-                }
+                if (r.ok) historyData = await r.json();
             } catch (e) { console.log('History unavailable:', e); }
         }
 
         async function fetchCurrent() {
             try {
+                // Fetch all data in parallel
                 await Promise.all([
                     (async () => {
                         const url = CONFIG.WEATHER_JSON_URL + '?v=' + Date.now();
@@ -287,7 +283,10 @@
                     fetchRecords(),
                     fetchForecast()
                 ]);
+                
+                // Now display everything - records are loaded!
                 displayCurrent();
+                displayForecast();  // Now records will be available
                 displayNormals();
                 displayWind();
                 displayPressure();
@@ -301,7 +300,6 @@
             const today = new Date();
             const todayKey = getDateKey(today);
             
-            // Today's records section
             let todayRecHtml = '';
             const todayRec = recordsData?.records_by_day?.[todayKey];
             if (todayRec) {
@@ -328,10 +326,8 @@
                     </div>`;
             }
             
-            // Past 7 days section
             let histHtml = '';
             if (historyData?.daily_records?.length) {
-                console.log('Building history display for', historyData.daily_records.length, 'days');
                 histHtml = `<div class="history-section"><div class="history-title">Past 7 Days</div>
                     ${historyData.daily_records.map(rec => {
                         const date = parseLocalDate(rec.date);
@@ -365,8 +361,6 @@
                         </div>`;
                     }).join('')}
                 </div>`;
-            } else {
-                console.log('No history data available');
             }
             
             document.getElementById('current-card').innerHTML = `
@@ -427,11 +421,10 @@
         }
 
         function updateTimestamp() {
-            document.getElementById('timestamp').textContent = `Last updated: ${new Date().toLocaleString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'})} · v2.1`;
+            document.getElementById('timestamp').textContent = `Last updated: ${new Date().toLocaleString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'})} · v2.2`;
         }
 
         async function init() {
-            console.log('Weather dashboard v2.1 initializing...');
             await fetchCurrent();
             updateTimestamp();
             setInterval(async () => { await fetchCurrent(); updateTimestamp(); }, 10*60*1000);
