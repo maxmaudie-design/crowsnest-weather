@@ -273,6 +273,7 @@
             align-items: center;
             padding: 10px 0;
             border-bottom: 1px solid rgba(0,0,0,0.1);
+            flex-wrap: wrap;
         }
 
         .forecast-list-item:last-child {
@@ -312,6 +313,22 @@
 
         .forecast-low {
             color: #3498db;
+        }
+
+        .forecast-records {
+            width: 100%;
+            font-size: 0.75em;
+            color: #666;
+            margin-top: 4px;
+            padding-left: 80px;
+        }
+
+        .forecast-records .rec-high {
+            color: #c0392b;
+        }
+
+        .forecast-records .rec-low {
+            color: #2980b9;
         }
 
         .wind-direction {
@@ -465,6 +482,11 @@
                 padding: 5px 0 0 0;
                 font-size: 0.85em;
             }
+
+            .forecast-records {
+                padding-left: 0;
+                order: 4;
+            }
         }
     </style>
 </head>
@@ -532,6 +554,12 @@
         function formatTemp(temp) {
             if (temp === undefined || temp === null) return '--';
             return temp.toFixed(1);
+        }
+
+        // Format temperature as integer (for forecast display)
+        function formatTempInt(temp) {
+            if (temp === undefined || temp === null) return '--';
+            return Math.round(temp);
         }
 
         // Get date key for records lookup (MM-DD format)
@@ -638,6 +666,7 @@
         function combineDayNightForecasts(forecasts) {
             const combined = [];
             let i = 0;
+            let dayOffset = 0;
             
             while (i < forecasts.length && combined.length < 7) {
                 const current = forecasts[i];
@@ -649,34 +678,40 @@
                         condition: current.condition,
                         high: null,
                         low: current.low || current.high,
-                        icon: getWeatherIcon(current.condition)
+                        icon: getWeatherIcon(current.condition),
+                        dayOffset: dayOffset
                     });
                     i++;
+                    dayOffset++;
                 } else if (next && next.isNight) {
                     combined.push({
                         day: current.day,
                         condition: current.condition,
                         high: current.high,
                         low: next.low || next.high,
-                        icon: getWeatherIcon(current.condition)
+                        icon: getWeatherIcon(current.condition),
+                        dayOffset: dayOffset
                     });
                     i += 2;
+                    dayOffset++;
                 } else {
                     combined.push({
                         day: current.day,
                         condition: current.condition,
                         high: current.high,
                         low: current.low,
-                        icon: getWeatherIcon(current.condition)
+                        icon: getWeatherIcon(current.condition),
+                        dayOffset: dayOffset
                     });
                     i++;
+                    dayOffset++;
                 }
             }
             
             return combined;
         }
 
-        // Display forecast
+        // Display forecast with historical records
         function displayForecast() {
             if (!forecastData || forecastData.length === 0) {
                 document.getElementById('forecast-card').innerHTML = `
@@ -686,19 +721,43 @@
                 return;
             }
             
+            const today = new Date();
+            
             const html = `
                 <h2>7-Day Forecast</h2>
                 <div class="forecast-list">
-                    ${forecastData.map((day, index) => `
-                        <div class="forecast-list-item${index === 0 ? ' today' : ''}">
-                            <span class="forecast-list-day">${day.day}</span>
-                            <span class="forecast-list-condition">${day.icon} ${day.condition}</span>
-                            <span class="forecast-list-temps">
-                                ${day.high !== null ? `<span class="forecast-high">${day.high}°</span>` : ''}
-                                ${day.low !== null ? `<span class="forecast-low"> / ${day.low}°</span>` : ''}
-                            </span>
-                        </div>
-                    `).join('')}
+                    ${forecastData.map((day, index) => {
+                        // Calculate the date for this forecast day
+                        const forecastDate = new Date(today);
+                        forecastDate.setDate(today.getDate() + day.dayOffset);
+                        const dateKey = getDateKey(forecastDate);
+                        
+                        // Look up historical records for this date
+                        let recordsHtml = '';
+                        if (recordsData?.records_by_day?.[dateKey]) {
+                            const records = recordsData.records_by_day[dateKey];
+                            const recHigh = records.record_high !== null ? formatTempInt(records.record_high) : '--';
+                            const recLow = records.record_low !== null ? formatTempInt(records.record_low) : '--';
+                            recordsHtml = `
+                                <div class="forecast-records">
+                                    📊 Records: <span class="rec-high">${recHigh}°</span> / <span class="rec-low">${recLow}°</span>
+                                    <span style="opacity: 0.7">(${records.record_high_year || '?'}/${records.record_low_year || '?'})</span>
+                                </div>
+                            `;
+                        }
+                        
+                        return `
+                            <div class="forecast-list-item${index === 0 ? ' today' : ''}">
+                                <span class="forecast-list-day">${day.day}</span>
+                                <span class="forecast-list-condition">${day.icon} ${day.condition}</span>
+                                <span class="forecast-list-temps">
+                                    ${day.high !== null ? `<span class="forecast-high">${day.high}°</span>` : ''}
+                                    ${day.low !== null ? `<span class="forecast-low"> / ${day.low}°</span>` : ''}
+                                </span>
+                                ${recordsHtml}
+                            </div>
+                        `;
+                    }).join('')}
                 </div>
                 <div style="margin-top: 15px; text-align: center; font-size: 0.8em; color: #555;">
                     <a href="https://weather.gc.ca/en/location/index.html?coords=49.631,-114.693" target="_blank" style="color: #667eea;">
