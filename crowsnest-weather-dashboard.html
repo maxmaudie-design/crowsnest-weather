@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>Crowsnest Pass Weather</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -43,15 +44,15 @@
         @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.05); } }
         .history-section { margin-top: 20px; padding-top: 15px; border-top: 2px solid #f0f0f0; }
         .history-title { font-size: 0.9em; font-weight: 600; color: #667eea; margin-bottom: 10px; }
-        .history-row { padding: 8px 0; font-size: 0.9em; border-bottom: 1px solid #f5f5f5; }
+        .history-row { padding: 10px 0; font-size: 0.9em; border-bottom: 1px solid #f5f5f5; }
         .history-row:last-child { border-bottom: none; }
-        .history-main { display: flex; justify-content: space-between; align-items: center; }
-        .history-date { color: #666; min-width: 120px; }
-        .history-temps { color: #333; font-weight: 500; }
-        .history-records { font-size: 0.8em; color: #888; margin-top: 4px; }
-        .history-records .rec-high { color: #c0392b; }
-        .history-records .rec-low { color: #2980b9; }
-        .record-marker { display: inline-block; font-size: 0.7em; padding: 1px 5px; border-radius: 8px; margin-left: 4px; font-weight: bold; }
+        .history-main { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .history-date { color: #444; font-weight: 500; min-width: 130px; }
+        .history-temps { color: #333; font-weight: 600; }
+        .history-records { font-size: 0.8em; color: #777; margin-top: 6px; width: 100%; }
+        .history-records .rec-high { color: #c0392b; font-weight: 500; }
+        .history-records .rec-low { color: #2980b9; font-weight: 500; }
+        .record-marker { display: inline-block; font-size: 0.65em; padding: 2px 6px; border-radius: 8px; margin-left: 4px; font-weight: bold; }
         .record-marker.high { background: #e74c3c; color: white; }
         .record-marker.low { background: #3498db; color: white; }
         .forecast-card { background: linear-gradient(135deg, #74ebd5 0%, #9face6 100%); }
@@ -66,9 +67,9 @@
         .forecast-temps { text-align: right; min-width: 80px; }
         .forecast-high { font-weight: bold; color: #e74c3c; }
         .forecast-low { color: #3498db; }
-        .forecast-records { font-size: 0.75em; color: #555; margin-top: 4px; }
-        .forecast-records .rec-high { color: #c0392b; }
-        .forecast-records .rec-low { color: #2980b9; }
+        .forecast-records { font-size: 0.78em; color: #444; margin-top: 6px; }
+        .forecast-records .rec-high { color: #c0392b; font-weight: 500; }
+        .forecast-records .rec-low { color: #2980b9; font-weight: 500; }
         .wind-direction { text-align: center; margin: 20px 0; }
         .wind-arrow { font-size: 3em; display: inline-block; transition: transform 0.3s ease; }
         .wind-speed { font-size: 2em; font-weight: bold; color: #764ba2; margin-top: 10px; text-align: center; }
@@ -111,6 +112,7 @@
     </div>
 
     <script>
+        // Version 2.1 - Added record years to all displays
         const CONFIG = {
             WEATHER_JSON_URL: './data/current_conditions.json',
             HISTORY_JSON_URL: './data/temperature_history.json',
@@ -125,11 +127,16 @@
         const formatTemp = (t) => t == null ? '--' : t.toFixed(1);
         const formatTempInt = (t) => t == null ? '--' : Math.round(t);
         const getDateKey = (d) => `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        const parseLocalDate = (s) => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+        
+        // Parse date string without timezone issues
+        function parseLocalDate(s) {
+            const [y, m, d] = s.split('-').map(Number);
+            return new Date(y, m - 1, d, 12, 0, 0); // noon to avoid any DST issues
+        }
 
         function isYesterday(date) {
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
+            const today = new Date();
+            const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
             return date.getFullYear() === yesterday.getFullYear() && 
                    date.getMonth() === yesterday.getMonth() && 
                    date.getDate() === yesterday.getDate();
@@ -213,10 +220,13 @@
                 <h2>7-Day Forecast</h2>
                 <div class="forecast-list">
                     ${forecastData.map((d, i) => {
-                        const fDate = new Date(today); fDate.setDate(today.getDate() + d.offset);
+                        const fDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + d.offset);
                         const key = getDateKey(fDate);
                         const rec = recordsData?.records_by_day?.[key];
-                        const recHtml = rec ? `<div class="forecast-records">📊 Records: <span class="rec-high">${formatTempInt(rec.record_high)}° (${rec.record_high_year})</span> / <span class="rec-low">${formatTempInt(rec.record_low)}° (${rec.record_low_year})</span></div>` : '';
+                        let recHtml = '';
+                        if (rec) {
+                            recHtml = `<div class="forecast-records">📊 Record High: <span class="rec-high">${formatTempInt(rec.record_high)}° (${rec.record_high_year})</span> · Record Low: <span class="rec-low">${formatTempInt(rec.record_low)}° (${rec.record_low_year})</span></div>`;
+                        }
                         return `<div class="forecast-item${i===0?' today':''}">
                             <div class="forecast-main">
                                 <span class="forecast-day">${d.day}</span>
@@ -233,23 +243,30 @@
 
         async function fetchRecords() {
             try {
-                let r = await fetch(CONFIG.RECORDS_JSON_URL + '?t=' + Date.now()).catch(() => fetch(CONFIG.GITHUB_RAW_URL + 'daily_records.json?t=' + Date.now()));
+                const url = CONFIG.RECORDS_JSON_URL + '?v=' + Date.now();
+                let r = await fetch(url).catch(() => fetch(CONFIG.GITHUB_RAW_URL + 'daily_records.json?v=' + Date.now()));
                 if (r.ok) recordsData = await r.json();
-            } catch (e) { console.log('Records unavailable'); }
+                console.log('Records loaded:', Object.keys(recordsData?.records_by_day || {}).length, 'days');
+            } catch (e) { console.log('Records unavailable:', e); }
         }
 
         async function fetchHistory() {
             try {
-                let r = await fetch(CONFIG.HISTORY_JSON_URL + '?t=' + Date.now()).catch(() => fetch(CONFIG.GITHUB_RAW_URL + 'temperature_history.json?t=' + Date.now()));
-                if (r.ok) historyData = await r.json();
-            } catch (e) { console.log('History unavailable'); }
+                const url = CONFIG.HISTORY_JSON_URL + '?v=' + Date.now();
+                let r = await fetch(url).catch(() => fetch(CONFIG.GITHUB_RAW_URL + 'temperature_history.json?v=' + Date.now()));
+                if (r.ok) {
+                    historyData = await r.json();
+                    console.log('History loaded:', historyData?.daily_records?.length, 'days:', historyData?.daily_records?.map(d => d.date).join(', '));
+                }
+            } catch (e) { console.log('History unavailable:', e); }
         }
 
         async function fetchCurrent() {
             try {
                 await Promise.all([
                     (async () => {
-                        let r = await fetch(CONFIG.WEATHER_JSON_URL + '?t=' + Date.now()).catch(() => fetch(CONFIG.GITHUB_RAW_URL + 'current_conditions.json?t=' + Date.now()));
+                        const url = CONFIG.WEATHER_JSON_URL + '?v=' + Date.now();
+                        let r = await fetch(url).catch(() => fetch(CONFIG.GITHUB_RAW_URL + 'current_conditions.json?v=' + Date.now()));
                         if (!r.ok) throw new Error('HTTP ' + r.status);
                         const raw = await r.json();
                         dailyStats = raw.daily_stats;
@@ -284,6 +301,7 @@
             const today = new Date();
             const todayKey = getDateKey(today);
             
+            // Today's records section
             let todayRecHtml = '';
             const todayRec = recordsData?.records_by_day?.[todayKey];
             if (todayRec) {
@@ -310,20 +328,34 @@
                     </div>`;
             }
             
+            // Past 7 days section
             let histHtml = '';
             if (historyData?.daily_records?.length) {
+                console.log('Building history display for', historyData.daily_records.length, 'days');
                 histHtml = `<div class="history-section"><div class="history-title">Past 7 Days</div>
                     ${historyData.daily_records.map(rec => {
                         const date = parseLocalDate(rec.date);
-                        const dayLabel = isYesterday(date) ? 'Yesterday' : date.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+                        const dayLabel = isYesterday(date) 
+                            ? 'Yesterday' 
+                            : date.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
                         const key = getDateKey(date);
                         const dayRec = recordsData?.records_by_day?.[key];
+                        
                         let markers = '';
                         if (dayRec) {
-                            if (rec.high != null && dayRec.record_high != null && rec.high >= dayRec.record_high) markers += '<span class="record-marker high">REC</span>';
-                            if (rec.low != null && dayRec.record_low != null && rec.low <= dayRec.record_low) markers += '<span class="record-marker low">REC</span>';
+                            if (rec.high != null && dayRec.record_high != null && rec.high >= dayRec.record_high) {
+                                markers += '<span class="record-marker high">REC HIGH</span>';
+                            }
+                            if (rec.low != null && dayRec.record_low != null && rec.low <= dayRec.record_low) {
+                                markers += '<span class="record-marker low">REC LOW</span>';
+                            }
                         }
-                        const recLine = dayRec ? `<div class="history-records">📊 Records: <span class="rec-high">${formatTemp(dayRec.record_high)}° (${dayRec.record_high_year})</span> / <span class="rec-low">${formatTemp(dayRec.record_low)}° (${dayRec.record_low_year})</span></div>` : '';
+                        
+                        let recLine = '';
+                        if (dayRec) {
+                            recLine = `<div class="history-records">📊 Record High: <span class="rec-high">${formatTemp(dayRec.record_high)}° (${dayRec.record_high_year})</span> · Record Low: <span class="rec-low">${formatTemp(dayRec.record_low)}° (${dayRec.record_low_year})</span></div>`;
+                        }
+                        
                         return `<div class="history-row">
                             <div class="history-main">
                                 <span class="history-date">${dayLabel}</span>
@@ -333,6 +365,8 @@
                         </div>`;
                     }).join('')}
                 </div>`;
+            } else {
+                console.log('No history data available');
             }
             
             document.getElementById('current-card').innerHTML = `
@@ -393,10 +427,11 @@
         }
 
         function updateTimestamp() {
-            document.getElementById('timestamp').textContent = `Last updated: ${new Date().toLocaleString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'})}`;
+            document.getElementById('timestamp').textContent = `Last updated: ${new Date().toLocaleString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'})} · v2.1`;
         }
 
         async function init() {
+            console.log('Weather dashboard v2.1 initializing...');
             await fetchCurrent();
             updateTimestamp();
             setInterval(async () => { await fetchCurrent(); updateTimestamp(); }, 10*60*1000);
