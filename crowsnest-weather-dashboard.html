@@ -112,7 +112,7 @@
     </div>
 
     <script>
-        // Version 2.2 - Fixed forecast records timing
+        // Version 2.3 - Fixed forecast records for real this time
         const CONFIG = {
             WEATHER_JSON_URL: './data/current_conditions.json',
             HISTORY_JSON_URL: './data/temperature_history.json',
@@ -157,6 +157,7 @@
             return '🌤️';
         }
 
+        // Just fetches and stores forecast data - NO display here
         async function fetchForecast() {
             try {
                 let response = await fetch(CONFIG.CORS_PROXY + encodeURIComponent(CONFIG.RSS_URL)).catch(() => fetch(CONFIG.RSS_URL));
@@ -183,7 +184,7 @@
                     }
                 });
                 forecastData = combineDayNight(forecasts);
-                // Don't display here - wait for records to load
+                console.log('Forecast loaded:', forecastData?.length, 'days');
             } catch (e) {
                 console.error('Forecast error:', e);
                 forecastData = null;
@@ -210,32 +211,38 @@
         }
 
         function displayForecast() {
+            console.log('displayForecast called, recordsData:', recordsData ? 'loaded' : 'null', ', forecastData:', forecastData?.length);
+            
             if (!forecastData?.length) {
                 document.getElementById('forecast-card').innerHTML = `<h2>7-Day Forecast</h2><div class="error">Unable to load. <a href="https://weather.gc.ca/en/location/index.html?coords=49.631,-114.693" target="_blank">View at EC</a></div>`;
                 return;
             }
             const today = new Date();
+            const html = forecastData.map((d, i) => {
+                const fDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + d.offset);
+                const key = getDateKey(fDate);
+                const rec = recordsData?.records_by_day?.[key];
+                
+                let recHtml = '';
+                if (rec) {
+                    recHtml = `<div class="forecast-records">📊 Record High: <span class="rec-high">${formatTempInt(rec.record_high)}° (${rec.record_high_year})</span> · Record Low: <span class="rec-low">${formatTempInt(rec.record_low)}° (${rec.record_low_year})</span></div>`;
+                } else {
+                    console.log('No record for key:', key);
+                }
+                
+                return `<div class="forecast-item${i===0?' today':''}">
+                    <div class="forecast-main">
+                        <span class="forecast-day">${d.day}</span>
+                        <span class="forecast-condition">${d.icon} ${d.condition}</span>
+                        <span class="forecast-temps">${d.high!=null?`<span class="forecast-high">${d.high}°</span>`:''}${d.low!=null?`<span class="forecast-low"> / ${d.low}°</span>`:''}</span>
+                    </div>
+                    ${recHtml}
+                </div>`;
+            }).join('');
+            
             document.getElementById('forecast-card').innerHTML = `
                 <h2>7-Day Forecast</h2>
-                <div class="forecast-list">
-                    ${forecastData.map((d, i) => {
-                        const fDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + d.offset);
-                        const key = getDateKey(fDate);
-                        const rec = recordsData?.records_by_day?.[key];
-                        let recHtml = '';
-                        if (rec) {
-                            recHtml = `<div class="forecast-records">📊 Record High: <span class="rec-high">${formatTempInt(rec.record_high)}° (${rec.record_high_year})</span> · Record Low: <span class="rec-low">${formatTempInt(rec.record_low)}° (${rec.record_low_year})</span></div>`;
-                        }
-                        return `<div class="forecast-item${i===0?' today':''}">
-                            <div class="forecast-main">
-                                <span class="forecast-day">${d.day}</span>
-                                <span class="forecast-condition">${d.icon} ${d.condition}</span>
-                                <span class="forecast-temps">${d.high!=null?`<span class="forecast-high">${d.high}°</span>`:''}${d.low!=null?`<span class="forecast-low"> / ${d.low}°</span>`:''}</span>
-                            </div>
-                            ${recHtml}
-                        </div>`;
-                    }).join('')}
-                </div>
+                <div class="forecast-list">${html}</div>
                 <div style="margin-top:15px;text-align:center;font-size:0.8em;color:#555;"><a href="https://weather.gc.ca/en/location/index.html?coords=49.631,-114.693" target="_blank" style="color:#667eea;">Full forecast →</a></div>
             `;
         }
@@ -243,26 +250,44 @@
         async function fetchRecords() {
             try {
                 const url = CONFIG.RECORDS_JSON_URL + '?v=' + Date.now();
-                let r = await fetch(url).catch(() => fetch(CONFIG.GITHUB_RAW_URL + 'daily_records.json?v=' + Date.now()));
-                if (r.ok) recordsData = await r.json();
-            } catch (e) { console.log('Records unavailable:', e); }
+                console.log('Fetching records from:', url);
+                let r = await fetch(url);
+                if (!r.ok) {
+                    console.log('Local fetch failed, trying GitHub raw...');
+                    r = await fetch(CONFIG.GITHUB_RAW_URL + 'daily_records.json?v=' + Date.now());
+                }
+                if (r.ok) {
+                    recordsData = await r.json();
+                    console.log('Records loaded:', Object.keys(recordsData?.records_by_day || {}).length, 'days');
+                }
+            } catch (e) { 
+                console.error('Records fetch error:', e); 
+            }
         }
 
         async function fetchHistory() {
             try {
                 const url = CONFIG.HISTORY_JSON_URL + '?v=' + Date.now();
-                let r = await fetch(url).catch(() => fetch(CONFIG.GITHUB_RAW_URL + 'temperature_history.json?v=' + Date.now()));
+                let r = await fetch(url);
+                if (!r.ok) {
+                    r = await fetch(CONFIG.GITHUB_RAW_URL + 'temperature_history.json?v=' + Date.now());
+                }
                 if (r.ok) historyData = await r.json();
             } catch (e) { console.log('History unavailable:', e); }
         }
 
-        async function fetchCurrent() {
+        async function fetchAllData() {
             try {
+                console.log('Starting data fetch...');
+                
                 // Fetch all data in parallel
                 await Promise.all([
                     (async () => {
                         const url = CONFIG.WEATHER_JSON_URL + '?v=' + Date.now();
-                        let r = await fetch(url).catch(() => fetch(CONFIG.GITHUB_RAW_URL + 'current_conditions.json?v=' + Date.now()));
+                        let r = await fetch(url);
+                        if (!r.ok) {
+                            r = await fetch(CONFIG.GITHUB_RAW_URL + 'current_conditions.json?v=' + Date.now());
+                        }
                         if (!r.ok) throw new Error('HTTP ' + r.status);
                         const raw = await r.json();
                         dailyStats = raw.daily_stats;
@@ -278,20 +303,24 @@
                             humidity: raw.conditions?.humidity_percent,
                             dewpoint: raw.conditions?.dewpoint
                         };
+                        console.log('Current conditions loaded');
                     })(),
                     fetchHistory(),
                     fetchRecords(),
                     fetchForecast()
                 ]);
                 
-                // Now display everything - records are loaded!
+                console.log('All data fetched! Records:', recordsData ? 'yes' : 'no');
+                
+                // NOW display everything - all data is loaded
                 displayCurrent();
-                displayForecast();  // Now records will be available
+                displayForecast();
                 displayNormals();
                 displayWind();
                 displayPressure();
+                
             } catch (e) {
-                console.error('Error:', e);
+                console.error('Error fetching data:', e);
                 document.getElementById('current-card').innerHTML = `<h2>Current Conditions</h2><div class="error">Unable to load. <a href="https://weather.gc.ca/en/location/index.html?coords=49.631,-114.693" target="_blank">View at EC</a></div>`;
             }
         }
@@ -421,13 +450,14 @@
         }
 
         function updateTimestamp() {
-            document.getElementById('timestamp').textContent = `Last updated: ${new Date().toLocaleString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'})} · v2.2`;
+            document.getElementById('timestamp').textContent = `Last updated: ${new Date().toLocaleString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'})} · v2.3`;
         }
 
         async function init() {
-            await fetchCurrent();
+            console.log('Weather dashboard v2.3 starting...');
+            await fetchAllData();
             updateTimestamp();
-            setInterval(async () => { await fetchCurrent(); updateTimestamp(); }, 10*60*1000);
+            setInterval(async () => { await fetchAllData(); updateTimestamp(); }, 10*60*1000);
         }
         init();
     </script>
