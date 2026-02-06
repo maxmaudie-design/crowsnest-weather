@@ -206,10 +206,11 @@
         .history-row {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
             padding: 8px 0;
             font-size: 0.9em;
             border-bottom: 1px solid #f5f5f5;
+            flex-wrap: wrap;
         }
 
         .history-row:last-child {
@@ -218,7 +219,7 @@
 
         .history-date {
             color: #666;
-            min-width: 100px;
+            min-width: 110px;
         }
 
         .history-temps {
@@ -229,10 +230,19 @@
         }
 
         .history-records {
+            width: 100%;
             font-size: 0.8em;
-            color: #aaa;
-            text-align: right;
-            min-width: 140px;
+            color: #888;
+            margin-top: 2px;
+            padding-left: 110px;
+        }
+
+        .history-records .rec-high {
+            color: #c0392b;
+        }
+
+        .history-records .rec-low {
+            color: #2980b9;
         }
 
         .record-marker {
@@ -457,13 +467,13 @@
                 padding: 10px 0;
             }
 
-            .history-date, .history-temps, .history-records {
+            .history-date, .history-temps {
                 text-align: left;
                 width: 100%;
             }
 
             .history-records {
-                font-size: 0.75em;
+                padding-left: 0;
             }
 
             .records-grid {
@@ -567,6 +577,12 @@
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
             return `${month}-${day}`;
+        }
+
+        // Parse date string (YYYY-MM-DD) without timezone issues
+        function parseLocalDate(dateStr) {
+            const [year, month, day] = dateStr.split('-').map(Number);
+            return new Date(year, month - 1, day);
         }
 
         // Get weather icon based on condition
@@ -740,8 +756,7 @@
                             const recLow = records.record_low !== null ? formatTempInt(records.record_low) : '--';
                             recordsHtml = `
                                 <div class="forecast-records">
-                                    📊 Records: <span class="rec-high">${recHigh}°</span> / <span class="rec-low">${recLow}°</span>
-                                    <span style="opacity: 0.7">(${records.record_high_year || '?'}/${records.record_low_year || '?'})</span>
+                                    📊 Records: <span class="rec-high">${recHigh}° (${records.record_high_year || '?'})</span> / <span class="rec-low">${recLow}° (${records.record_low_year || '?'})</span>
                                 </div>
                             `;
                         }
@@ -897,13 +912,14 @@
             if (historyData?.daily_records?.length > 0) {
                 historyHTML = `
                     <div class="history-section">
-                        <div class="history-title">Past 7 Days (Observed High/Low → Records)</div>
+                        <div class="history-title">Past 7 Days</div>
                         ${historyData.daily_records.map(record => {
-                            const date = new Date(record.date);
+                            // Parse the date string properly to avoid timezone issues
+                            const date = parseLocalDate(record.date);
                             const dayName = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
                             const dateKey = getDateKey(date);
                             
-                            let recordsInfo = '';
+                            let recordsHtml = '';
                             let markers = '';
                             
                             if (recordsData?.records_by_day?.[dateKey]) {
@@ -916,14 +932,20 @@
                                     markers += '<span class="record-marker low">REC</span>';
                                 }
                                 
-                                recordsInfo = `Rec: ${dayRecords.record_high !== null ? formatTemp(dayRecords.record_high) : '--'}° / ${dayRecords.record_low !== null ? formatTemp(dayRecords.record_low) : '--'}°`;
+                                const recHigh = dayRecords.record_high !== null ? formatTemp(dayRecords.record_high) : '--';
+                                const recLow = dayRecords.record_low !== null ? formatTemp(dayRecords.record_low) : '--';
+                                recordsHtml = `
+                                    <div class="history-records">
+                                        📊 Records: <span class="rec-high">${recHigh}° (${dayRecords.record_high_year || '?'})</span> / <span class="rec-low">${recLow}° (${dayRecords.record_low_year || '?'})</span>
+                                    </div>
+                                `;
                             }
                             
                             return `
                                 <div class="history-row">
                                     <span class="history-date">${dayName}</span>
                                     <span class="history-temps">${formatTemp(record.high)}° / ${formatTemp(record.low)}°${markers}</span>
-                                    <span class="history-records">${recordsInfo}</span>
+                                    ${recordsHtml}
                                 </div>
                             `;
                         }).join('')}
