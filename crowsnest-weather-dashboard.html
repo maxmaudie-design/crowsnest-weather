@@ -109,6 +109,87 @@
             font-weight: 600;
         }
 
+        /* Today's Records Section */
+        .todays-records {
+            margin: 20px 0;
+            padding: 15px;
+            background: linear-gradient(135deg, #fff5f5 0%, #fef5ff 100%);
+            border-radius: 12px;
+            border: 1px solid #eee;
+        }
+
+        .todays-records-title {
+            font-size: 0.85em;
+            font-weight: 600;
+            color: #764ba2;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .records-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .record-item {
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .record-high {
+            background: rgba(231, 76, 60, 0.1);
+        }
+
+        .record-low {
+            background: rgba(52, 152, 219, 0.1);
+        }
+
+        .record-label {
+            font-size: 0.75em;
+            color: #888;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .record-temp {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .record-high .record-temp {
+            color: #e74c3c;
+        }
+
+        .record-low .record-temp {
+            color: #3498db;
+        }
+
+        .record-year {
+            font-size: 0.8em;
+            color: #999;
+            margin-top: 2px;
+        }
+
+        .record-broken {
+            display: inline-block;
+            background: linear-gradient(135deg, #f39c12 0%, #e74c3c 100%);
+            color: white;
+            font-size: 0.7em;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-top: 5px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+
+        /* History Section */
         .history-section {
             margin-top: 20px;
             padding-top: 15px;
@@ -125,16 +206,52 @@
         .history-row {
             display: flex;
             justify-content: space-between;
-            padding: 6px 0;
+            align-items: center;
+            padding: 8px 0;
             font-size: 0.9em;
+            border-bottom: 1px solid #f5f5f5;
+        }
+
+        .history-row:last-child {
+            border-bottom: none;
         }
 
         .history-date {
-            color: #999;
+            color: #666;
+            min-width: 100px;
         }
 
         .history-temps {
             color: #333;
+            font-weight: 500;
+            flex-grow: 1;
+            text-align: center;
+        }
+
+        .history-records {
+            font-size: 0.8em;
+            color: #aaa;
+            text-align: right;
+            min-width: 140px;
+        }
+
+        .record-marker {
+            display: inline-block;
+            font-size: 0.7em;
+            padding: 1px 5px;
+            border-radius: 8px;
+            margin-left: 4px;
+            font-weight: bold;
+        }
+
+        .record-marker.high {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .record-marker.low {
+            background: #3498db;
+            color: white;
         }
 
         .wind-direction {
@@ -271,6 +388,33 @@
             .dashboard {
                 grid-template-columns: 1fr;
             }
+
+            .history-row {
+                flex-direction: column;
+                gap: 4px;
+                padding: 10px 0;
+            }
+
+            .history-date {
+                text-align: left;
+                width: 100%;
+            }
+
+            .history-temps {
+                text-align: left;
+                width: 100%;
+            }
+
+            .history-records {
+                text-align: left;
+                width: 100%;
+                font-size: 0.75em;
+            }
+
+            .records-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
         }
     </style>
 </head>
@@ -315,6 +459,7 @@
         const CONFIG = {
             WEATHER_JSON_URL: './data/current_conditions.json',
             HISTORY_JSON_URL: './data/temperature_history.json',
+            RECORDS_JSON_URL: './data/daily_records.json',
             GITHUB_RAW_URL: 'https://raw.githubusercontent.com/maxmaudie-design/crowsnest-weather/main/data/',
             COORDS: { lat: 49.631, lon: -114.693 }
         };
@@ -322,11 +467,38 @@
         let currentData = null;
         let historyData = null;
         let dailyStats = null;
+        let recordsData = null;
 
         // Format temperature to 1 decimal place
         function formatTemp(temp) {
             if (temp === undefined || temp === null) return '--';
             return temp.toFixed(1);
+        }
+
+        // Get date key for records lookup (MM-DD format)
+        function getDateKey(date) {
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${month}-${day}`;
+        }
+
+        // Fetch daily records data
+        async function fetchDailyRecords() {
+            try {
+                let response;
+                try {
+                    response = await fetch(CONFIG.RECORDS_JSON_URL + '?t=' + Date.now());
+                } catch (e) {
+                    response = await fetch(CONFIG.GITHUB_RAW_URL + 'daily_records.json?t=' + Date.now());
+                }
+                
+                if (response.ok) {
+                    recordsData = await response.json();
+                    console.log('Daily records loaded');
+                }
+            } catch (error) {
+                console.log('Daily records not yet available:', error.message);
+            }
         }
 
         // Fetch temperature history
@@ -353,7 +525,7 @@
             try {
                 console.log('Fetching weather data from GitHub...');
                 
-                // Fetch both current conditions and history
+                // Fetch all data sources
                 await Promise.all([
                     (async () => {
                         let response;
@@ -389,7 +561,8 @@
                             timestamp: rawData.timestamp || rawData.fetch_time_utc
                         };
                     })(),
-                    fetchTemperatureHistory()
+                    fetchTemperatureHistory(),
+                    fetchDailyRecords()
                 ]);
                 
                 // Display all data
@@ -420,21 +593,81 @@
             }
         }
 
-        // Display current conditions with 7-day history
+        // Display current conditions with 7-day history and records
         function displayCurrentConditions(data) {
-            let historyHTML = '';
+            const today = new Date();
+            const todayKey = getDateKey(today);
             
+            // Today's records section
+            let todaysRecordsHTML = '';
+            if (recordsData && recordsData.records_by_day && recordsData.records_by_day[todayKey]) {
+                const todayRecords = recordsData.records_by_day[todayKey];
+                
+                // Check if today broke the record (using dailyStats for today's high if available)
+                let recordBrokenHTML = '';
+                if (dailyStats && dailyStats.max_temp !== null && todayRecords.record_high !== null) {
+                    if (dailyStats.max_temp > todayRecords.record_high) {
+                        recordBrokenHTML = `<span class="record-broken">🔥 NEW RECORD! ${formatTemp(dailyStats.max_temp)}°C</span>`;
+                    }
+                }
+                
+                todaysRecordsHTML = `
+                    <div class="todays-records">
+                        <div class="todays-records-title">📊 Today's Historical Records (${today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})</div>
+                        <div class="records-grid">
+                            <div class="record-item record-high">
+                                <div class="record-label">Record High</div>
+                                <div class="record-temp">${todayRecords.record_high !== null ? formatTemp(todayRecords.record_high) + '°' : '--'}</div>
+                                <div class="record-year">${todayRecords.record_high_year || '--'}</div>
+                                ${recordBrokenHTML}
+                            </div>
+                            <div class="record-item record-low">
+                                <div class="record-label">Record Low</div>
+                                <div class="record-temp">${todayRecords.record_low !== null ? formatTemp(todayRecords.record_low) + '°' : '--'}</div>
+                                <div class="record-year">${todayRecords.record_low_year || '--'}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // 7-day history with records
+            let historyHTML = '';
             if (historyData && historyData.daily_records && historyData.daily_records.length > 0) {
                 historyHTML = `
                     <div class="history-section">
-                        <div class="history-title">Past 7 Days (High / Low)</div>
+                        <div class="history-title">Past 7 Days (Observed High/Low → Records)</div>
                         ${historyData.daily_records.map(record => {
                             const date = new Date(record.date);
                             const dayName = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                            const dateKey = getDateKey(date);
+                            
+                            let recordsInfo = '';
+                            let markers = '';
+                            
+                            if (recordsData && recordsData.records_by_day && recordsData.records_by_day[dateKey]) {
+                                const dayRecords = recordsData.records_by_day[dateKey];
+                                
+                                // Check for record breaking
+                                if (record.high !== null && dayRecords.record_high !== null) {
+                                    if (record.high >= dayRecords.record_high) {
+                                        markers += '<span class="record-marker high">REC</span>';
+                                    }
+                                }
+                                if (record.low !== null && dayRecords.record_low !== null) {
+                                    if (record.low <= dayRecords.record_low) {
+                                        markers += '<span class="record-marker low">REC</span>';
+                                    }
+                                }
+                                
+                                recordsInfo = `Rec: ${dayRecords.record_high !== null ? formatTemp(dayRecords.record_high) : '--'}° / ${dayRecords.record_low !== null ? formatTemp(dayRecords.record_low) : '--'}°`;
+                            }
+                            
                             return `
                                 <div class="history-row">
                                     <span class="history-date">${dayName}</span>
-                                    <span class="history-temps">${formatTemp(record.high)}° / ${formatTemp(record.low)}°</span>
+                                    <span class="history-temps">${formatTemp(record.high)}° / ${formatTemp(record.low)}°${markers}</span>
+                                    <span class="history-records">${recordsInfo}</span>
                                 </div>
                             `;
                         }).join('')}
@@ -456,6 +689,7 @@
                     <span class="detail-label">Dewpoint</span>
                     <span class="detail-value">${formatTemp(data.dewpoint)}°C</span>
                 </div>
+                ${todaysRecordsHTML}
                 ${historyHTML}
             `;
             document.getElementById('current-card').innerHTML = html;
@@ -587,7 +821,7 @@
                 </div>
                 ` : ''}
                 <div style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.5); border-radius: 8px; font-size: 0.9em; color: #666;">
-                    <strong>Note:</strong> Climate normals based on 1981-2010 Environment Canada data. Your full historical dataset (1893-2026) contains 113+ years of detailed records.
+                    <strong>Note:</strong> Climate normals based on 1981-2010 Environment Canada data. Historical records drawn from 113+ years of data (1893-2026).
                 </div>
             `;
             document.getElementById('historical-card').innerHTML = html;
