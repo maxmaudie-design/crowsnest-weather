@@ -5,12 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crowsnest Pass Weather</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -18,485 +13,84 @@
             padding: 20px;
             color: #333;
         }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        header {
-            text-align: center;
-            color: white;
-            margin-bottom: 30px;
-        }
-
-        header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-
-        header p {
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
-
-        .dashboard {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        .card {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            transition: transform 0.3s ease;
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-        }
-
-        .card h2 {
-            font-size: 1.3em;
-            margin-bottom: 15px;
-            color: #667eea;
-            border-bottom: 2px solid #f0f0f0;
-            padding-bottom: 10px;
-        }
-
-        .current-temp {
-            font-size: 4em;
-            font-weight: bold;
-            color: #667eea;
-            text-align: center;
-            margin: 20px 0;
-        }
-
-        .current-temp .unit {
-            font-size: 0.4em;
-            color: #999;
-        }
-
-        .condition {
-            text-align: center;
-            font-size: 1.2em;
-            color: #666;
-            margin-bottom: 20px;
-        }
-
-        .detail-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        .detail-row:last-child {
-            border-bottom: none;
-        }
-
-        .detail-label {
-            color: #666;
-            font-weight: 500;
-        }
-
-        .detail-value {
-            color: #333;
-            font-weight: 600;
-        }
-
-        /* Today's Records Section */
-        .todays-records {
-            margin: 20px 0;
-            padding: 15px;
-            background: linear-gradient(135deg, #fff5f5 0%, #fef5ff 100%);
-            border-radius: 12px;
-            border: 1px solid #eee;
-        }
-
-        .todays-records-title {
-            font-size: 0.85em;
-            font-weight: 600;
-            color: #764ba2;
-            margin-bottom: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .records-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-
-        .record-item {
-            text-align: center;
-            padding: 10px;
-            border-radius: 8px;
-        }
-
-        .record-high {
-            background: rgba(231, 76, 60, 0.1);
-        }
-
-        .record-low {
-            background: rgba(52, 152, 219, 0.1);
-        }
-
-        .record-label {
-            font-size: 0.75em;
-            color: #888;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-        }
-
-        .record-temp {
-            font-size: 1.5em;
-            font-weight: bold;
-        }
-
-        .record-high .record-temp {
-            color: #e74c3c;
-        }
-
-        .record-low .record-temp {
-            color: #3498db;
-        }
-
-        .record-year {
-            font-size: 0.8em;
-            color: #999;
-            margin-top: 2px;
-        }
-
-        .record-broken {
-            display: inline-block;
-            background: linear-gradient(135deg, #f39c12 0%, #e74c3c 100%);
-            color: white;
-            font-size: 0.7em;
-            padding: 3px 8px;
-            border-radius: 12px;
-            margin-top: 5px;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.8; transform: scale(1.05); }
-        }
-
-        /* History Section */
-        .history-section {
-            margin-top: 20px;
-            padding-top: 15px;
-            border-top: 2px solid #f0f0f0;
-        }
-
-        .history-title {
-            font-size: 0.9em;
-            font-weight: 600;
-            color: #667eea;
-            margin-bottom: 10px;
-        }
-
-        .history-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            padding: 8px 0;
-            font-size: 0.9em;
-            border-bottom: 1px solid #f5f5f5;
-            flex-wrap: wrap;
-        }
-
-        .history-row:last-child {
-            border-bottom: none;
-        }
-
-        .history-date {
-            color: #666;
-            min-width: 110px;
-        }
-
-        .history-temps {
-            color: #333;
-            font-weight: 500;
-            flex-grow: 1;
-            text-align: center;
-        }
-
-        .history-records {
-            width: 100%;
-            font-size: 0.8em;
-            color: #888;
-            margin-top: 2px;
-            padding-left: 110px;
-        }
-
-        .history-records .rec-high {
-            color: #c0392b;
-        }
-
-        .history-records .rec-low {
-            color: #2980b9;
-        }
-
-        .record-marker {
-            display: inline-block;
-            font-size: 0.7em;
-            padding: 1px 5px;
-            border-radius: 8px;
-            margin-left: 4px;
-            font-weight: bold;
-        }
-
-        .record-marker.high {
-            background: #e74c3c;
-            color: white;
-        }
-
-        .record-marker.low {
-            background: #3498db;
-            color: white;
-        }
-
-        /* 7-Day Forecast Card */
-        .forecast-card {
-            background: linear-gradient(135deg, #74ebd5 0%, #9face6 100%);
-        }
-
-        .forecast-card h2 {
-            color: #2d3748;
-        }
-
-        .forecast-list {
-            margin-top: 15px;
-        }
-
-        .forecast-list-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px solid rgba(0,0,0,0.1);
-            flex-wrap: wrap;
-        }
-
-        .forecast-list-item:last-child {
-            border-bottom: none;
-        }
-
-        .forecast-list-item.today {
-            background: rgba(102, 126, 234, 0.15);
-            margin: 0 -10px;
-            padding: 10px;
-            border-radius: 8px;
-        }
-
-        .forecast-list-day {
-            font-weight: 500;
-            color: #333;
-            min-width: 80px;
-        }
-
-        .forecast-list-condition {
-            flex-grow: 1;
-            text-align: center;
-            color: #555;
-            font-size: 0.9em;
-            padding: 0 10px;
-        }
-
-        .forecast-list-temps {
-            text-align: right;
-            min-width: 80px;
-        }
-
-        .forecast-high {
-            font-weight: bold;
-            color: #e74c3c;
-        }
-
-        .forecast-low {
-            color: #3498db;
-        }
-
-        .forecast-records {
-            width: 100%;
-            font-size: 0.75em;
-            color: #666;
-            margin-top: 4px;
-            padding-left: 80px;
-        }
-
-        .forecast-records .rec-high {
-            color: #c0392b;
-        }
-
-        .forecast-records .rec-low {
-            color: #2980b9;
-        }
-
-        .wind-direction {
-            text-align: center;
-            margin: 20px 0;
-        }
-
-        .wind-arrow {
-            font-size: 3em;
-            display: inline-block;
-            transition: transform 0.3s ease;
-        }
-
-        .wind-speed {
-            font-size: 2em;
-            font-weight: bold;
-            color: #764ba2;
-            margin-top: 10px;
-        }
-
-        .gust-info {
-            text-align: center;
-            margin-top: 10px;
-            padding: 10px;
-            background: rgba(118, 75, 162, 0.1);
-            border-radius: 8px;
-            font-size: 0.95em;
-            color: #666;
-        }
-
-        .gust-speed {
-            font-weight: bold;
-            color: #764ba2;
-        }
-
-        .daily-max-gust {
-            text-align: center;
-            margin-top: 15px;
-            padding: 12px;
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
-            border-radius: 8px;
-            color: white;
-        }
-
-        .daily-max-gust .label {
-            font-size: 0.85em;
-            opacity: 0.9;
-        }
-
-        .daily-max-gust .value {
-            font-size: 1.4em;
-            font-weight: bold;
-            margin-top: 5px;
-        }
-
-        .historical-compare {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        }
-
-        .pressure-card {
-            background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
-        }
-
-        .pressure-value {
-            font-size: 2.5em;
-            font-weight: bold;
-            text-align: center;
-            color: #5e35b1;
-            margin: 15px 0;
-        }
-
-        .trend {
-            text-align: center;
-            font-size: 1.1em;
-            color: #666;
-        }
-
-        .trend-up {
-            color: #e74c3c;
-        }
-
-        .trend-down {
-            color: #3498db;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #999;
-            font-style: italic;
-        }
-
-        .error {
-            background: #fee;
-            color: #c33;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 10px 0;
-            font-size: 0.9em;
-        }
-
-        .timestamp {
-            text-align: center;
-            color: white;
-            opacity: 0.8;
-            margin-top: 20px;
-            font-size: 0.9em;
-        }
-
+        .container { max-width: 1400px; margin: 0 auto; }
+        header { text-align: center; color: white; margin-bottom: 30px; }
+        header h1 { font-size: 2.5em; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        header p { font-size: 1.1em; opacity: 0.9; }
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .card { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); transition: transform 0.3s ease; }
+        .card:hover { transform: translateY(-5px); }
+        .card h2 { font-size: 1.3em; margin-bottom: 15px; color: #667eea; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+        .current-temp { font-size: 4em; font-weight: bold; color: #667eea; text-align: center; margin: 20px 0; }
+        .current-temp .unit { font-size: 0.4em; color: #999; }
+        .condition { text-align: center; font-size: 1.2em; color: #666; margin-bottom: 20px; }
+        .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-label { color: #666; font-weight: 500; }
+        .detail-value { color: #333; font-weight: 600; }
+        .todays-records { margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #fff5f5 0%, #fef5ff 100%); border-radius: 12px; border: 1px solid #eee; }
+        .todays-records-title { font-size: 0.85em; font-weight: 600; color: #764ba2; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .records-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .record-item { text-align: center; padding: 10px; border-radius: 8px; }
+        .record-high { background: rgba(231, 76, 60, 0.1); }
+        .record-low { background: rgba(52, 152, 219, 0.1); }
+        .record-label { font-size: 0.75em; color: #888; text-transform: uppercase; margin-bottom: 4px; }
+        .record-temp { font-size: 1.5em; font-weight: bold; }
+        .record-high .record-temp { color: #e74c3c; }
+        .record-low .record-temp { color: #3498db; }
+        .record-year { font-size: 0.8em; color: #999; margin-top: 2px; }
+        .record-broken { display: inline-block; background: linear-gradient(135deg, #f39c12 0%, #e74c3c 100%); color: white; font-size: 0.7em; padding: 3px 8px; border-radius: 12px; margin-top: 5px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.05); } }
+        .history-section { margin-top: 20px; padding-top: 15px; border-top: 2px solid #f0f0f0; }
+        .history-title { font-size: 0.9em; font-weight: 600; color: #667eea; margin-bottom: 10px; }
+        .history-row { padding: 8px 0; font-size: 0.9em; border-bottom: 1px solid #f5f5f5; }
+        .history-row:last-child { border-bottom: none; }
+        .history-main { display: flex; justify-content: space-between; align-items: center; }
+        .history-date { color: #666; min-width: 120px; }
+        .history-temps { color: #333; font-weight: 500; }
+        .history-records { font-size: 0.8em; color: #888; margin-top: 4px; }
+        .history-records .rec-high { color: #c0392b; }
+        .history-records .rec-low { color: #2980b9; }
+        .record-marker { display: inline-block; font-size: 0.7em; padding: 1px 5px; border-radius: 8px; margin-left: 4px; font-weight: bold; }
+        .record-marker.high { background: #e74c3c; color: white; }
+        .record-marker.low { background: #3498db; color: white; }
+        .forecast-card { background: linear-gradient(135deg, #74ebd5 0%, #9face6 100%); }
+        .forecast-card h2 { color: #2d3748; }
+        .forecast-list { margin-top: 15px; }
+        .forecast-item { padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.1); }
+        .forecast-item:last-child { border-bottom: none; }
+        .forecast-item.today { background: rgba(102, 126, 234, 0.15); margin: 0 -10px; padding: 10px; border-radius: 8px; }
+        .forecast-main { display: flex; justify-content: space-between; align-items: center; }
+        .forecast-day { font-weight: 500; color: #333; min-width: 80px; }
+        .forecast-condition { flex-grow: 1; text-align: center; color: #555; font-size: 0.9em; padding: 0 10px; }
+        .forecast-temps { text-align: right; min-width: 80px; }
+        .forecast-high { font-weight: bold; color: #e74c3c; }
+        .forecast-low { color: #3498db; }
+        .forecast-records { font-size: 0.75em; color: #555; margin-top: 4px; }
+        .forecast-records .rec-high { color: #c0392b; }
+        .forecast-records .rec-low { color: #2980b9; }
+        .wind-direction { text-align: center; margin: 20px 0; }
+        .wind-arrow { font-size: 3em; display: inline-block; transition: transform 0.3s ease; }
+        .wind-speed { font-size: 2em; font-weight: bold; color: #764ba2; margin-top: 10px; text-align: center; }
+        .gust-info { text-align: center; margin-top: 10px; padding: 10px; background: rgba(118, 75, 162, 0.1); border-radius: 8px; font-size: 0.95em; color: #666; }
+        .gust-speed { font-weight: bold; color: #764ba2; }
+        .daily-max-gust { text-align: center; margin-top: 15px; padding: 12px; background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); border-radius: 8px; color: white; }
+        .daily-max-gust .label { font-size: 0.85em; opacity: 0.9; }
+        .daily-max-gust .value { font-size: 1.4em; font-weight: bold; margin-top: 5px; }
+        .historical-compare { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
+        .pressure-card { background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%); }
+        .pressure-value { font-size: 2.5em; font-weight: bold; text-align: center; color: #5e35b1; margin: 15px 0; }
+        .trend { text-align: center; font-size: 1.1em; color: #666; }
+        .trend-up { color: #e74c3c; }
+        .trend-down { color: #3498db; }
+        .loading { text-align: center; padding: 40px; color: #999; font-style: italic; }
+        .error { background: #fee; color: #c33; padding: 15px; border-radius: 8px; margin: 10px 0; font-size: 0.9em; }
+        .timestamp { text-align: center; color: white; opacity: 0.8; margin-top: 20px; font-size: 0.9em; }
         @media (max-width: 768px) {
-            header h1 {
-                font-size: 1.8em;
-            }
-            
-            .current-temp {
-                font-size: 3em;
-            }
-            
-            .dashboard {
-                grid-template-columns: 1fr;
-            }
-
-            .history-row {
-                flex-direction: column;
-                gap: 4px;
-                padding: 10px 0;
-            }
-
-            .history-date, .history-temps {
-                text-align: left;
-                width: 100%;
-            }
-
-            .history-records {
-                padding-left: 0;
-            }
-
-            .records-grid {
-                grid-template-columns: 1fr 1fr;
-                gap: 10px;
-            }
-
-            .forecast-list-item {
-                flex-wrap: wrap;
-            }
-
-            .forecast-list-condition {
-                order: 3;
-                width: 100%;
-                text-align: left;
-                padding: 5px 0 0 0;
-                font-size: 0.85em;
-            }
-
-            .forecast-records {
-                padding-left: 0;
-                order: 4;
-            }
+            header h1 { font-size: 1.8em; }
+            .current-temp { font-size: 3em; }
+            .dashboard { grid-template-columns: 1fr; }
+            .records-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
         }
     </style>
 </head>
@@ -506,612 +100,307 @@
             <h1>🏔️ Crowsnest Pass Weather</h1>
             <p>Alberta's Windiest Mountain Pass - Live from Environment Canada</p>
         </header>
-
         <div class="dashboard">
-            <!-- Current Conditions Card -->
-            <div class="card" id="current-card">
-                <h2>Current Conditions</h2>
-                <div class="loading">Loading current data...</div>
-            </div>
-
-            <!-- 7-Day Forecast Card -->
-            <div class="card forecast-card" id="forecast-card">
-                <h2>7-Day Forecast</h2>
-                <div class="loading">Loading forecast...</div>
-            </div>
-
-            <!-- Climate Normals Card -->
-            <div class="card historical-compare" id="historical-card">
-                <h2>Climate Normals</h2>
-                <div class="loading">Loading climate data...</div>
-            </div>
-
-            <!-- Wind Card -->
-            <div class="card" id="wind-card">
-                <h2>Wind Conditions</h2>
-                <div class="loading">Loading wind data...</div>
-            </div>
-
-            <!-- Air Pressure Card -->
-            <div class="card pressure-card" id="pressure-card">
-                <h2>Air Pressure</h2>
-                <div class="loading">Loading pressure data...</div>
-            </div>
+            <div class="card" id="current-card"><h2>Current Conditions</h2><div class="loading">Loading...</div></div>
+            <div class="card forecast-card" id="forecast-card"><h2>7-Day Forecast</h2><div class="loading">Loading...</div></div>
+            <div class="card historical-compare" id="historical-card"><h2>Climate Normals</h2><div class="loading">Loading...</div></div>
+            <div class="card" id="wind-card"><h2>Wind Conditions</h2><div class="loading">Loading...</div></div>
+            <div class="card pressure-card" id="pressure-card"><h2>Air Pressure</h2><div class="loading">Loading...</div></div>
         </div>
-
         <div class="timestamp" id="timestamp"></div>
     </div>
 
     <script>
-        // Configuration
         const CONFIG = {
             WEATHER_JSON_URL: './data/current_conditions.json',
             HISTORY_JSON_URL: './data/temperature_history.json',
             RECORDS_JSON_URL: './data/daily_records.json',
             RSS_URL: 'https://weather.gc.ca/rss/weather/49.631_-114.693_e.xml',
             GITHUB_RAW_URL: 'https://raw.githubusercontent.com/maxmaudie-design/crowsnest-weather/main/data/',
-            CORS_PROXY: 'https://api.allorigins.win/raw?url=',
-            COORDS: { lat: 49.631, lon: -114.693 }
+            CORS_PROXY: 'https://api.allorigins.win/raw?url='
         };
 
-        let currentData = null;
-        let historyData = null;
-        let dailyStats = null;
-        let recordsData = null;
-        let forecastData = null;
+        let currentData = null, historyData = null, dailyStats = null, recordsData = null, forecastData = null;
 
-        // Format temperature
-        function formatTemp(temp) {
-            if (temp === undefined || temp === null) return '--';
-            return temp.toFixed(1);
+        const formatTemp = (t) => t == null ? '--' : t.toFixed(1);
+        const formatTempInt = (t) => t == null ? '--' : Math.round(t);
+        const getDateKey = (d) => `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        const parseLocalDate = (s) => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+
+        function isYesterday(date) {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            return date.getFullYear() === yesterday.getFullYear() && 
+                   date.getMonth() === yesterday.getMonth() && 
+                   date.getDate() === yesterday.getDate();
         }
 
-        // Format temperature as integer (for forecast display)
-        function formatTempInt(temp) {
-            if (temp === undefined || temp === null) return '--';
-            return Math.round(temp);
-        }
-
-        // Get date key for records lookup (MM-DD format)
-        function getDateKey(date) {
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${month}-${day}`;
-        }
-
-        // Parse date string (YYYY-MM-DD) without timezone issues
-        function parseLocalDate(dateStr) {
-            const [year, month, day] = dateStr.split('-').map(Number);
-            return new Date(year, month - 1, day);
-        }
-
-        // Get weather icon based on condition
-        function getWeatherIcon(condition) {
-            if (!condition) return '🌡️';
-            const cond = condition.toLowerCase();
-            
-            if (cond.includes('sunny') || cond.includes('clear')) return '☀️';
-            if (cond.includes('partly') && cond.includes('cloud')) return '⛅';
-            if (cond.includes('cloudy') || cond.includes('overcast')) return '☁️';
-            if (cond.includes('rain') && cond.includes('snow')) return '🌨️';
-            if (cond.includes('rain') || cond.includes('shower')) return '🌧️';
-            if (cond.includes('snow') || cond.includes('flurr')) return '❄️';
-            if (cond.includes('thunder') || cond.includes('storm')) return '⛈️';
-            if (cond.includes('fog') || cond.includes('mist')) return '🌫️';
-            if (cond.includes('wind')) return '💨';
-            if (cond.includes('mix')) return '🌨️';
-            
+        function getWeatherIcon(c) {
+            if (!c) return '🌡️';
+            const l = c.toLowerCase();
+            if (l.includes('sunny') || l.includes('clear')) return '☀️';
+            if (l.includes('partly') && l.includes('cloud')) return '⛅';
+            if (l.includes('cloudy') || l.includes('overcast')) return '☁️';
+            if (l.includes('rain') && l.includes('snow')) return '🌨️';
+            if (l.includes('rain') || l.includes('shower')) return '🌧️';
+            if (l.includes('snow') || l.includes('flurr')) return '❄️';
+            if (l.includes('thunder') || l.includes('storm')) return '⛈️';
+            if (l.includes('fog') || l.includes('mist')) return '🌫️';
+            if (l.includes('wind')) return '💨';
+            if (l.includes('mix')) return '🌨️';
             return '🌤️';
         }
 
-        // Fetch and parse RSS feed for forecast
         async function fetchForecast() {
             try {
-                let response;
-                try {
-                    response = await fetch(CONFIG.CORS_PROXY + encodeURIComponent(CONFIG.RSS_URL));
-                } catch (e) {
-                    // Fallback: try direct fetch
-                    response = await fetch(CONFIG.RSS_URL);
-                }
-                
-                if (!response.ok) throw new Error('Failed to fetch RSS');
-                
+                let response = await fetch(CONFIG.CORS_PROXY + encodeURIComponent(CONFIG.RSS_URL)).catch(() => fetch(CONFIG.RSS_URL));
+                if (!response.ok) throw new Error('Failed');
                 const xmlText = await response.text();
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-                
-                const entries = xmlDoc.querySelectorAll('entry');
+                const xmlDoc = new DOMParser().parseFromString(xmlText, 'text/xml');
                 const forecasts = [];
-                
-                entries.forEach(entry => {
+                xmlDoc.querySelectorAll('entry').forEach(entry => {
                     const title = entry.querySelector('title')?.textContent || '';
                     const summary = entry.querySelector('summary')?.textContent || '';
-                    
-                    // Look for forecast entries
                     if (title.match(/^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Tonight|Today)/i)) {
-                        // Parse temperature from summary
                         const highMatch = summary.match(/High\s*(minus\s*)?(\d+)/i);
                         const lowMatch = summary.match(/Low\s*(minus\s*)?(\d+)/i);
-                        
-                        let high = null;
-                        let low = null;
-                        
-                        if (highMatch) {
-                            high = parseInt(highMatch[2]);
-                            if (highMatch[1]) high = -high;
-                        }
-                        if (lowMatch) {
-                            low = parseInt(lowMatch[2]);
-                            if (lowMatch[1]) low = -low;
-                        }
-                        
-                        // Extract condition from title
-                        const conditionMatch = title.match(/:\s*(.+)/);
-                        const condition = conditionMatch ? conditionMatch[1].trim() : '';
-                        
+                        let high = highMatch ? parseInt(highMatch[2]) * (highMatch[1] ? -1 : 1) : null;
+                        let low = lowMatch ? parseInt(lowMatch[2]) * (lowMatch[1] ? -1 : 1) : null;
+                        const condMatch = title.match(/:\s*(.+)/);
                         const dayMatch = title.match(/^(\w+)/);
-                        const dayName = dayMatch ? dayMatch[1] : '';
-                        
                         forecasts.push({
-                            day: dayName,
-                            condition: condition,
-                            high: high,
-                            low: low,
+                            day: dayMatch?.[1] || '',
+                            condition: condMatch?.[1]?.trim() || '',
+                            high, low,
                             isNight: title.toLowerCase().includes('night') || title.toLowerCase().includes('tonight')
                         });
                     }
                 });
-                
-                forecastData = combineDayNightForecasts(forecasts);
+                forecastData = combineDayNight(forecasts);
                 displayForecast();
-                
-            } catch (error) {
-                console.error('Error fetching forecast:', error);
-                document.getElementById('forecast-card').innerHTML = `
-                    <h2>7-Day Forecast</h2>
-                    <div class="error">
-                        Unable to load forecast.<br>
-                        <small><a href="https://weather.gc.ca/en/location/index.html?coords=49.631,-114.693" target="_blank">View at Environment Canada →</a></small>
-                    </div>
-                `;
+            } catch (e) {
+                console.error('Forecast error:', e);
+                document.getElementById('forecast-card').innerHTML = `<h2>7-Day Forecast</h2><div class="error">Unable to load. <a href="https://weather.gc.ca/en/location/index.html?coords=49.631,-114.693" target="_blank">View at EC</a></div>`;
             }
         }
 
-        // Combine day and night forecasts
-        function combineDayNightForecasts(forecasts) {
+        function combineDayNight(forecasts) {
             const combined = [];
-            let i = 0;
-            let dayOffset = 0;
-            
+            let i = 0, offset = 0;
             while (i < forecasts.length && combined.length < 7) {
-                const current = forecasts[i];
-                const next = forecasts[i + 1];
-                
-                if (current.isNight) {
-                    combined.push({
-                        day: current.day === 'Tonight' ? 'Tonight' : current.day,
-                        condition: current.condition,
-                        high: null,
-                        low: current.low || current.high,
-                        icon: getWeatherIcon(current.condition),
-                        dayOffset: dayOffset
-                    });
-                    i++;
-                    dayOffset++;
-                } else if (next && next.isNight) {
-                    combined.push({
-                        day: current.day,
-                        condition: current.condition,
-                        high: current.high,
-                        low: next.low || next.high,
-                        icon: getWeatherIcon(current.condition),
-                        dayOffset: dayOffset
-                    });
-                    i += 2;
-                    dayOffset++;
+                const cur = forecasts[i], next = forecasts[i+1];
+                if (cur.isNight) {
+                    combined.push({ day: cur.day === 'Tonight' ? 'Tonight' : cur.day, condition: cur.condition, high: null, low: cur.low || cur.high, icon: getWeatherIcon(cur.condition), offset });
+                    i++; offset++;
+                } else if (next?.isNight) {
+                    combined.push({ day: cur.day, condition: cur.condition, high: cur.high, low: next.low || next.high, icon: getWeatherIcon(cur.condition), offset });
+                    i += 2; offset++;
                 } else {
-                    combined.push({
-                        day: current.day,
-                        condition: current.condition,
-                        high: current.high,
-                        low: current.low,
-                        icon: getWeatherIcon(current.condition),
-                        dayOffset: dayOffset
-                    });
-                    i++;
-                    dayOffset++;
+                    combined.push({ day: cur.day, condition: cur.condition, high: cur.high, low: cur.low, icon: getWeatherIcon(cur.condition), offset });
+                    i++; offset++;
                 }
             }
-            
             return combined;
         }
 
-        // Display forecast with historical records
         function displayForecast() {
-            if (!forecastData || forecastData.length === 0) {
-                document.getElementById('forecast-card').innerHTML = `
-                    <h2>7-Day Forecast</h2>
-                    <div class="error">No forecast data available</div>
-                `;
+            if (!forecastData?.length) {
+                document.getElementById('forecast-card').innerHTML = `<h2>7-Day Forecast</h2><div class="error">No data</div>`;
                 return;
             }
-            
             const today = new Date();
-            
-            const html = `
+            document.getElementById('forecast-card').innerHTML = `
                 <h2>7-Day Forecast</h2>
                 <div class="forecast-list">
-                    ${forecastData.map((day, index) => {
-                        // Calculate the date for this forecast day
-                        const forecastDate = new Date(today);
-                        forecastDate.setDate(today.getDate() + day.dayOffset);
-                        const dateKey = getDateKey(forecastDate);
-                        
-                        // Look up historical records for this date
-                        let recordsHtml = '';
-                        if (recordsData?.records_by_day?.[dateKey]) {
-                            const records = recordsData.records_by_day[dateKey];
-                            const recHigh = records.record_high !== null ? formatTempInt(records.record_high) : '--';
-                            const recLow = records.record_low !== null ? formatTempInt(records.record_low) : '--';
-                            recordsHtml = `
-                                <div class="forecast-records">
-                                    📊 Records: <span class="rec-high">${recHigh}° (${records.record_high_year || '?'})</span> / <span class="rec-low">${recLow}° (${records.record_low_year || '?'})</span>
-                                </div>
-                            `;
-                        }
-                        
-                        return `
-                            <div class="forecast-list-item${index === 0 ? ' today' : ''}">
-                                <span class="forecast-list-day">${day.day}</span>
-                                <span class="forecast-list-condition">${day.icon} ${day.condition}</span>
-                                <span class="forecast-list-temps">
-                                    ${day.high !== null ? `<span class="forecast-high">${day.high}°</span>` : ''}
-                                    ${day.low !== null ? `<span class="forecast-low"> / ${day.low}°</span>` : ''}
-                                </span>
-                                ${recordsHtml}
+                    ${forecastData.map((d, i) => {
+                        const fDate = new Date(today); fDate.setDate(today.getDate() + d.offset);
+                        const key = getDateKey(fDate);
+                        const rec = recordsData?.records_by_day?.[key];
+                        const recHtml = rec ? `<div class="forecast-records">📊 Records: <span class="rec-high">${formatTempInt(rec.record_high)}° (${rec.record_high_year})</span> / <span class="rec-low">${formatTempInt(rec.record_low)}° (${rec.record_low_year})</span></div>` : '';
+                        return `<div class="forecast-item${i===0?' today':''}">
+                            <div class="forecast-main">
+                                <span class="forecast-day">${d.day}</span>
+                                <span class="forecast-condition">${d.icon} ${d.condition}</span>
+                                <span class="forecast-temps">${d.high!=null?`<span class="forecast-high">${d.high}°</span>`:''}${d.low!=null?`<span class="forecast-low"> / ${d.low}°</span>`:''}</span>
                             </div>
-                        `;
+                            ${recHtml}
+                        </div>`;
                     }).join('')}
                 </div>
-                <div style="margin-top: 15px; text-align: center; font-size: 0.8em; color: #555;">
-                    <a href="https://weather.gc.ca/en/location/index.html?coords=49.631,-114.693" target="_blank" style="color: #667eea;">
-                        Full forecast at Environment Canada →
-                    </a>
-                </div>
+                <div style="margin-top:15px;text-align:center;font-size:0.8em;color:#555;"><a href="https://weather.gc.ca/en/location/index.html?coords=49.631,-114.693" target="_blank" style="color:#667eea;">Full forecast →</a></div>
             `;
-            document.getElementById('forecast-card').innerHTML = html;
         }
 
-        // Fetch daily records data
-        async function fetchDailyRecords() {
+        async function fetchRecords() {
             try {
-                let response;
-                try {
-                    response = await fetch(CONFIG.RECORDS_JSON_URL + '?t=' + Date.now());
-                } catch (e) {
-                    response = await fetch(CONFIG.GITHUB_RAW_URL + 'daily_records.json?t=' + Date.now());
-                }
-                
-                if (response.ok) {
-                    recordsData = await response.json();
-                }
-            } catch (error) {
-                console.log('Daily records not yet available');
-            }
+                let r = await fetch(CONFIG.RECORDS_JSON_URL + '?t=' + Date.now()).catch(() => fetch(CONFIG.GITHUB_RAW_URL + 'daily_records.json?t=' + Date.now()));
+                if (r.ok) recordsData = await r.json();
+            } catch (e) { console.log('Records unavailable'); }
         }
 
-        // Fetch temperature history
-        async function fetchTemperatureHistory() {
+        async function fetchHistory() {
             try {
-                let response;
-                try {
-                    response = await fetch(CONFIG.HISTORY_JSON_URL + '?t=' + Date.now());
-                } catch (e) {
-                    response = await fetch(CONFIG.GITHUB_RAW_URL + 'temperature_history.json?t=' + Date.now());
-                }
-                
-                if (response.ok) {
-                    historyData = await response.json();
-                }
-            } catch (error) {
-                console.log('Temperature history not yet available');
-            }
+                let r = await fetch(CONFIG.HISTORY_JSON_URL + '?t=' + Date.now()).catch(() => fetch(CONFIG.GITHUB_RAW_URL + 'temperature_history.json?t=' + Date.now()));
+                if (r.ok) historyData = await r.json();
+            } catch (e) { console.log('History unavailable'); }
         }
 
-        // Fetch current conditions
-        async function fetchCurrentConditions() {
+        async function fetchCurrent() {
             try {
                 await Promise.all([
                     (async () => {
-                        let response;
-                        try {
-                            response = await fetch(CONFIG.WEATHER_JSON_URL + '?t=' + Date.now());
-                        } catch (e) {
-                            response = await fetch(CONFIG.GITHUB_RAW_URL + 'current_conditions.json?t=' + Date.now());
-                        }
-                        
-                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                        
-                        const rawData = await response.json();
-                        dailyStats = rawData.daily_stats;
-                        
+                        let r = await fetch(CONFIG.WEATHER_JSON_URL + '?t=' + Date.now()).catch(() => fetch(CONFIG.GITHUB_RAW_URL + 'current_conditions.json?t=' + Date.now()));
+                        if (!r.ok) throw new Error('HTTP ' + r.status);
+                        const raw = await r.json();
+                        dailyStats = raw.daily_stats;
                         currentData = {
-                            temperature: rawData.conditions?.temperature,
-                            condition: rawData.conditions?.condition,
-                            pressure: rawData.conditions?.pressure_kpa,
-                            tendency: rawData.conditions?.pressure_tendency,
-                            windSpeed: rawData.conditions?.wind_speed_kmh,
-                            windGust: rawData.conditions?.wind_gust_kmh,
-                            dailyMaxGust: rawData.conditions?.daily_max_gust_kmh || rawData.daily_stats?.max_gust_kmh,
-                            windDirection: rawData.conditions?.wind_direction,
-                            humidity: rawData.conditions?.humidity_percent,
-                            dewpoint: rawData.conditions?.dewpoint,
-                            timestamp: rawData.timestamp || rawData.fetch_time_utc
+                            temperature: raw.conditions?.temperature,
+                            condition: raw.conditions?.condition,
+                            pressure: raw.conditions?.pressure_kpa,
+                            tendency: raw.conditions?.pressure_tendency,
+                            windSpeed: raw.conditions?.wind_speed_kmh,
+                            windGust: raw.conditions?.wind_gust_kmh,
+                            dailyMaxGust: raw.conditions?.daily_max_gust_kmh || raw.daily_stats?.max_gust_kmh,
+                            windDirection: raw.conditions?.wind_direction,
+                            humidity: raw.conditions?.humidity_percent,
+                            dewpoint: raw.conditions?.dewpoint
                         };
                     })(),
-                    fetchTemperatureHistory(),
-                    fetchDailyRecords(),
+                    fetchHistory(),
+                    fetchRecords(),
                     fetchForecast()
                 ]);
-                
-                displayCurrentConditions(currentData);
-                displayClimateNormals();
-                displayWindConditions(currentData);
-                displayPressure(currentData);
-                
-            } catch (error) {
-                console.error('Error fetching weather data:', error);
-                document.getElementById('current-card').innerHTML = `
-                    <h2>Current Conditions</h2>
-                    <div class="error">
-                        <strong>Unable to load current conditions.</strong><br>
-                        <small><a href="https://weather.gc.ca/en/location/index.html?coords=49.631,-114.693" target="_blank">View at Environment Canada</a></small>
-                    </div>
-                `;
+                displayCurrent();
+                displayNormals();
+                displayWind();
+                displayPressure();
+            } catch (e) {
+                console.error('Error:', e);
+                document.getElementById('current-card').innerHTML = `<h2>Current Conditions</h2><div class="error">Unable to load. <a href="https://weather.gc.ca/en/location/index.html?coords=49.631,-114.693" target="_blank">View at EC</a></div>`;
             }
         }
 
-        // Display current conditions with history and records
-        function displayCurrentConditions(data) {
+        function displayCurrent() {
             const today = new Date();
             const todayKey = getDateKey(today);
             
-            let todaysRecordsHTML = '';
-            if (recordsData?.records_by_day?.[todayKey]) {
-                const todayRecords = recordsData.records_by_day[todayKey];
-                
-                let recordBrokenHTML = '';
-                if (dailyStats?.max_temp !== null && todayRecords.record_high !== null) {
-                    if (dailyStats.max_temp > todayRecords.record_high) {
-                        recordBrokenHTML = `<span class="record-broken">🔥 NEW RECORD! ${formatTemp(dailyStats.max_temp)}°C</span>`;
-                    }
+            let todayRecHtml = '';
+            const todayRec = recordsData?.records_by_day?.[todayKey];
+            if (todayRec) {
+                let brokenHtml = '';
+                if (dailyStats?.max_temp != null && todayRec.record_high != null && dailyStats.max_temp > todayRec.record_high) {
+                    brokenHtml = `<span class="record-broken">🔥 NEW RECORD! ${formatTemp(dailyStats.max_temp)}°C</span>`;
                 }
-                
-                todaysRecordsHTML = `
+                todayRecHtml = `
                     <div class="todays-records">
-                        <div class="todays-records-title">📊 Today's Historical Records (${today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})</div>
+                        <div class="todays-records-title">📊 Today's Records (${today.toLocaleDateString('en-US',{month:'short',day:'numeric'})})</div>
                         <div class="records-grid">
                             <div class="record-item record-high">
                                 <div class="record-label">Record High</div>
-                                <div class="record-temp">${todayRecords.record_high !== null ? formatTemp(todayRecords.record_high) + '°' : '--'}</div>
-                                <div class="record-year">${todayRecords.record_high_year || '--'}</div>
-                                ${recordBrokenHTML}
+                                <div class="record-temp">${todayRec.record_high!=null?formatTemp(todayRec.record_high)+'°':'--'}</div>
+                                <div class="record-year">${todayRec.record_high_year||'--'}</div>
+                                ${brokenHtml}
                             </div>
                             <div class="record-item record-low">
                                 <div class="record-label">Record Low</div>
-                                <div class="record-temp">${todayRecords.record_low !== null ? formatTemp(todayRecords.record_low) + '°' : '--'}</div>
-                                <div class="record-year">${todayRecords.record_low_year || '--'}</div>
+                                <div class="record-temp">${todayRec.record_low!=null?formatTemp(todayRec.record_low)+'°':'--'}</div>
+                                <div class="record-year">${todayRec.record_low_year||'--'}</div>
                             </div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             }
             
-            let historyHTML = '';
-            if (historyData?.daily_records?.length > 0) {
-                historyHTML = `
-                    <div class="history-section">
-                        <div class="history-title">Past 7 Days</div>
-                        ${historyData.daily_records.map(record => {
-                            // Parse the date string properly to avoid timezone issues
-                            const date = parseLocalDate(record.date);
-                            const dayName = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-                            const dateKey = getDateKey(date);
-                            
-                            let recordsHtml = '';
-                            let markers = '';
-                            
-                            if (recordsData?.records_by_day?.[dateKey]) {
-                                const dayRecords = recordsData.records_by_day[dateKey];
-                                
-                                if (record.high !== null && dayRecords.record_high !== null && record.high >= dayRecords.record_high) {
-                                    markers += '<span class="record-marker high">REC</span>';
-                                }
-                                if (record.low !== null && dayRecords.record_low !== null && record.low <= dayRecords.record_low) {
-                                    markers += '<span class="record-marker low">REC</span>';
-                                }
-                                
-                                const recHigh = dayRecords.record_high !== null ? formatTemp(dayRecords.record_high) : '--';
-                                const recLow = dayRecords.record_low !== null ? formatTemp(dayRecords.record_low) : '--';
-                                recordsHtml = `
-                                    <div class="history-records">
-                                        📊 Records: <span class="rec-high">${recHigh}° (${dayRecords.record_high_year || '?'})</span> / <span class="rec-low">${recLow}° (${dayRecords.record_low_year || '?'})</span>
-                                    </div>
-                                `;
-                            }
-                            
-                            return `
-                                <div class="history-row">
-                                    <span class="history-date">${dayName}</span>
-                                    <span class="history-temps">${formatTemp(record.high)}° / ${formatTemp(record.low)}°${markers}</span>
-                                    ${recordsHtml}
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                `;
+            let histHtml = '';
+            if (historyData?.daily_records?.length) {
+                histHtml = `<div class="history-section"><div class="history-title">Past 7 Days</div>
+                    ${historyData.daily_records.map(rec => {
+                        const date = parseLocalDate(rec.date);
+                        const dayLabel = isYesterday(date) ? 'Yesterday' : date.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+                        const key = getDateKey(date);
+                        const dayRec = recordsData?.records_by_day?.[key];
+                        let markers = '';
+                        if (dayRec) {
+                            if (rec.high != null && dayRec.record_high != null && rec.high >= dayRec.record_high) markers += '<span class="record-marker high">REC</span>';
+                            if (rec.low != null && dayRec.record_low != null && rec.low <= dayRec.record_low) markers += '<span class="record-marker low">REC</span>';
+                        }
+                        const recLine = dayRec ? `<div class="history-records">📊 Records: <span class="rec-high">${formatTemp(dayRec.record_high)}° (${dayRec.record_high_year})</span> / <span class="rec-low">${formatTemp(dayRec.record_low)}° (${dayRec.record_low_year})</span></div>` : '';
+                        return `<div class="history-row">
+                            <div class="history-main">
+                                <span class="history-date">${dayLabel}</span>
+                                <span class="history-temps">${formatTemp(rec.high)}° / ${formatTemp(rec.low)}°${markers}</span>
+                            </div>
+                            ${recLine}
+                        </div>`;
+                    }).join('')}
+                </div>`;
             }
             
             document.getElementById('current-card').innerHTML = `
                 <h2>Current Conditions</h2>
-                <div class="current-temp">
-                    ${formatTemp(data.temperature)}<span class="unit">°C</span>
-                </div>
-                <div class="condition">${data.condition || 'Not Available'}</div>
-                <div class="detail-row">
-                    <span class="detail-label">Humidity</span>
-                    <span class="detail-value">${data.humidity || '--'}%</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Dewpoint</span>
-                    <span class="detail-value">${formatTemp(data.dewpoint)}°C</span>
-                </div>
-                ${todaysRecordsHTML}
-                ${historyHTML}
+                <div class="current-temp">${formatTemp(currentData.temperature)}<span class="unit">°C</span></div>
+                <div class="condition">${currentData.condition||'Not Available'}</div>
+                <div class="detail-row"><span class="detail-label">Humidity</span><span class="detail-value">${currentData.humidity||'--'}%</span></div>
+                <div class="detail-row"><span class="detail-label">Dewpoint</span><span class="detail-value">${formatTemp(currentData.dewpoint)}°C</span></div>
+                ${todayRecHtml}
+                ${histHtml}
             `;
         }
 
-        // Display wind conditions
-        function displayWindConditions(data) {
-            const arrows = {
-                'N': '↓', 'NNE': '↓', 'NE': '↙', 'ENE': '↙',
-                'E': '←', 'ESE': '←', 'SE': '↖', 'SSE': '↖',
-                'S': '↑', 'SSW': '↑', 'SW': '↗', 'WSW': '↗',
-                'W': '→', 'WNW': '→', 'NW': '↘', 'NNW': '↘'
-            };
-            const angles = {
-                'N': 180, 'NNE': 202.5, 'NE': 225, 'ENE': 247.5,
-                'E': 270, 'ESE': 292.5, 'SE': 315, 'SSE': 337.5,
-                'S': 0, 'SSW': 22.5, 'SW': 45, 'WSW': 67.5,
-                'W': 90, 'WNW': 112.5, 'NW': 135, 'NNW': 157.5
-            };
-            
-            const arrow = data.windDirection ? (arrows[data.windDirection.toUpperCase()] || '◆') : '◆';
-            const rotation = data.windDirection ? (angles[data.windDirection.toUpperCase()] || 0) : 0;
-            
-            let gustHTML = '';
-            if (data.windGust && data.windGust > 0) {
-                gustHTML = `
-                    <div class="gust-info">
-                        Current Gusts: <span class="gust-speed">${data.windGust} km/h</span>
-                        (${(data.windGust * 0.621371).toFixed(1)} mph)
-                    </div>
-                `;
-            }
-            
-            let dailyMaxGustHTML = '';
-            if (data.dailyMaxGust && data.dailyMaxGust > 0) {
-                dailyMaxGustHTML = `
-                    <div class="daily-max-gust">
-                        <div class="label">🌪️ Today's Max Gust</div>
-                        <div class="value">${data.dailyMaxGust} km/h (${(data.dailyMaxGust * 0.621371).toFixed(1)} mph)</div>
-                    </div>
-                `;
-            }
-            
+        function displayWind() {
+            const arrows = {'N':'↓','NNE':'↓','NE':'↙','ENE':'↙','E':'←','ESE':'←','SE':'↖','SSE':'↖','S':'↑','SSW':'↑','SW':'↗','WSW':'↗','W':'→','WNW':'→','NW':'↘','NNW':'↘'};
+            const angles = {'N':180,'NNE':202.5,'NE':225,'ENE':247.5,'E':270,'ESE':292.5,'SE':315,'SSE':337.5,'S':0,'SSW':22.5,'SW':45,'WSW':67.5,'W':90,'WNW':112.5,'NW':135,'NNW':157.5};
+            const dir = currentData.windDirection?.toUpperCase() || '';
+            const arrow = arrows[dir] || '◆';
+            const rot = angles[dir] || 0;
+            let gustHtml = currentData.windGust > 0 ? `<div class="gust-info">Gusts: <span class="gust-speed">${currentData.windGust} km/h</span> (${(currentData.windGust*0.621371).toFixed(1)} mph)</div>` : '';
+            let maxGustHtml = currentData.dailyMaxGust > 0 ? `<div class="daily-max-gust"><div class="label">🌪️ Today's Max Gust</div><div class="value">${currentData.dailyMaxGust} km/h (${(currentData.dailyMaxGust*0.621371).toFixed(1)} mph)</div></div>` : '';
             document.getElementById('wind-card').innerHTML = `
                 <h2>Wind Conditions</h2>
-                <div class="wind-direction">
-                    <div class="wind-arrow" style="transform: rotate(${rotation}deg);">${arrow}</div>
-                    <div style="margin-top: 10px; color: #666; font-size: 1.2em;">${data.windDirection || 'Variable'}</div>
-                </div>
-                <div class="wind-speed">${data.windSpeed || '0'} km/h</div>
-                <div style="text-align: center; margin-top: 10px; color: #666; font-size: 0.9em;">
-                    ${data.windSpeed ? `${(data.windSpeed * 0.621371).toFixed(1)} mph` : ''}
-                </div>
-                ${gustHTML}
-                ${dailyMaxGustHTML}
+                <div class="wind-direction"><div class="wind-arrow" style="transform:rotate(${rot}deg)">${arrow}</div><div style="margin-top:10px;color:#666;font-size:1.2em">${currentData.windDirection||'Variable'}</div></div>
+                <div class="wind-speed">${currentData.windSpeed||'0'} km/h</div>
+                <div style="text-align:center;margin-top:10px;color:#666;font-size:0.9em">${currentData.windSpeed?`${(currentData.windSpeed*0.621371).toFixed(1)} mph`:''}</div>
+                ${gustHtml}${maxGustHtml}
             `;
         }
 
-        // Display pressure
-        function displayPressure(data) {
-            let trendText = '', trendClass = '';
-            if (data.tendency) {
-                if (data.tendency.includes('ris')) { trendText = '↗ Rising'; trendClass = 'trend-up'; }
-                else if (data.tendency.includes('fall')) { trendText = '↘ Falling'; trendClass = 'trend-down'; }
-                else { trendText = '→ Steady'; }
-            }
-            
+        function displayPressure() {
+            let trend = '', cls = '';
+            if (currentData.tendency?.includes('ris')) { trend = '↗ Rising'; cls = 'trend-up'; }
+            else if (currentData.tendency?.includes('fall')) { trend = '↘ Falling'; cls = 'trend-down'; }
+            else if (currentData.tendency) { trend = '→ Steady'; }
             document.getElementById('pressure-card').innerHTML = `
                 <h2>Air Pressure</h2>
-                <div class="pressure-value">
-                    ${data.pressure !== undefined ? data.pressure.toFixed(1) : '--'} <span style="font-size: 0.5em; color: #999;">kPa</span>
-                </div>
-                ${trendText ? `<div class="trend ${trendClass}">${trendText}</div>` : ''}
-                <div style="text-align: center; margin-top: 15px; color: #666; font-size: 0.9em;">
-                    ${data.pressure ? `${(data.pressure * 10).toFixed(1)} mb | ${(data.pressure * 0.2953).toFixed(2)} inHg` : ''}
-                </div>
-                <div style="margin-top: 20px; padding: 12px; background: rgba(255,255,255,0.3); border-radius: 8px; font-size: 0.85em; color: #555;">
-                    <strong>Wind Prediction:</strong> Falling pressure often means wind & storms ahead. Rising pressure brings calmer conditions.
-                </div>
+                <div class="pressure-value">${currentData.pressure!=null?currentData.pressure.toFixed(1):'--'} <span style="font-size:0.5em;color:#999">kPa</span></div>
+                ${trend?`<div class="trend ${cls}">${trend}</div>`:''}
+                <div style="text-align:center;margin-top:15px;color:#666;font-size:0.9em">${currentData.pressure?`${(currentData.pressure*10).toFixed(1)} mb | ${(currentData.pressure*0.2953).toFixed(2)} inHg`:''}</div>
+                <div style="margin-top:20px;padding:12px;background:rgba(255,255,255,0.3);border-radius:8px;font-size:0.85em;color:#555"><strong>Wind Prediction:</strong> Falling pressure often means wind & storms ahead.</div>
             `;
         }
 
-        // Display climate normals
-        function displayClimateNormals() {
-            const today = new Date();
-            const month = today.toLocaleDateString('en-US', { month: 'long' });
-            
-            const monthlyNormals = {
-                'January': { high: -2, low: -14 }, 'February': { high: 0, low: -12 },
-                'March': { high: 4, low: -8 }, 'April': { high: 10, low: -3 },
-                'May': { high: 15, low: 2 }, 'June': { high: 19, low: 6 },
-                'July': { high: 23, low: 8 }, 'August': { high: 22, low: 7 },
-                'September': { high: 17, low: 3 }, 'October': { high: 11, low: -2 },
-                'November': { high: 2, low: -9 }, 'December': { high: -2, low: -13 }
-            };
-            
-            const normals = monthlyNormals[month] || { high: 0, low: 0 };
-            
+        function displayNormals() {
+            const month = new Date().toLocaleDateString('en-US',{month:'long'});
+            const normals = {'January':{h:-2,l:-14},'February':{h:0,l:-12},'March':{h:4,l:-8},'April':{h:10,l:-3},'May':{h:15,l:2},'June':{h:19,l:6},'July':{h:23,l:8},'August':{h:22,l:7},'September':{h:17,l:3},'October':{h:11,l:-2},'November':{h:2,l:-9},'December':{h:-2,l:-13}};
+            const n = normals[month] || {h:0,l:0};
+            const cmp = currentData?.temperature != null ? `<div class="detail-row"><span class="detail-label">Current vs Normal</span><span class="detail-value" style="color:${currentData.temperature>n.h?'#e74c3c':currentData.temperature<n.l?'#3498db':'#27ae60'}">${currentData.temperature>n.h?'▲ Above':currentData.temperature<n.l?'▼ Below':'● Normal'}</span></div>` : '';
             document.getElementById('historical-card').innerHTML = `
                 <h2>Climate Normals</h2>
-                <div class="detail-row">
-                    <span class="detail-label">Month</span>
-                    <span class="detail-value">${month}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Normal High</span>
-                    <span class="detail-value">${normals.high}°C</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Normal Low</span>
-                    <span class="detail-value">${normals.low}°C</span>
-                </div>
-                ${currentData?.temperature !== undefined ? `
-                <div class="detail-row">
-                    <span class="detail-label">Current vs Normal</span>
-                    <span class="detail-value" style="color: ${currentData.temperature > normals.high ? '#e74c3c' : currentData.temperature < normals.low ? '#3498db' : '#27ae60'};">
-                        ${currentData.temperature > normals.high ? '▲ Above Normal' : currentData.temperature < normals.low ? '▼ Below Normal' : '● Normal Range'}
-                    </span>
-                </div>
-                ` : ''}
-                <div style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.5); border-radius: 8px; font-size: 0.9em; color: #666;">
-                    <strong>Note:</strong> Climate normals based on 1981-2010 Environment Canada data. Historical records drawn from 113+ years of data (1893-2026).
-                </div>
+                <div class="detail-row"><span class="detail-label">Month</span><span class="detail-value">${month}</span></div>
+                <div class="detail-row"><span class="detail-label">Normal High</span><span class="detail-value">${n.h}°C</span></div>
+                <div class="detail-row"><span class="detail-label">Normal Low</span><span class="detail-value">${n.l}°C</span></div>
+                ${cmp}
+                <div style="margin-top:20px;padding:15px;background:rgba(255,255,255,0.5);border-radius:8px;font-size:0.9em;color:#666"><strong>Note:</strong> Normals from 1981-2010 data. Records from 113+ years (1893-2026).</div>
             `;
         }
 
-        // Update timestamp
         function updateTimestamp() {
-            document.getElementById('timestamp').textContent = 
-                `Last updated: ${new Date().toLocaleString('en-US', { 
-                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-                    hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
-                })}`;
+            document.getElementById('timestamp').textContent = `Last updated: ${new Date().toLocaleString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'})}`;
         }
 
-        // Initialize
         async function init() {
-            await fetchCurrentConditions();
+            await fetchCurrent();
             updateTimestamp();
-            setInterval(async () => {
-                await fetchCurrentConditions();
-                updateTimestamp();
-            }, 10 * 60 * 1000);
+            setInterval(async () => { await fetchCurrent(); updateTimestamp(); }, 10*60*1000);
         }
-
         init();
     </script>
 </body>
