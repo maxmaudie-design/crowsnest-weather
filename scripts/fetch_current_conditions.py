@@ -250,7 +250,9 @@ def save_daily_stats(stats):
 
 
 def update_daily_stats(conditions):
-    """Update daily statistics with current conditions."""
+    """Update daily statistics with current conditions.
+    NOTE: Only call this with observed conditions - never with forecast values.
+    """
     stats = load_daily_stats()
     now_str = datetime.utcnow().strftime('%H:%M UTC')
     updated = False
@@ -493,12 +495,15 @@ def fetch_weather_data():
                         
                         if current_condition:
                             conditions['condition'] = current_condition
-                        
-                        if 'wind_gust_kmh' not in conditions and forecast_gust:
-                            conditions['wind_gust_kmh'] = forecast_gust
-                            print(f"Using forecast gust: {forecast_gust} km/h")
-                        
+
+                        # Update daily stats with OBSERVED conditions only (before forecast fallback)
                         daily_stats = update_daily_stats(conditions)
+
+                        # Add forecast gust for display only - stored separately so it
+                        # never contaminates the observed daily max gust stat
+                        if forecast_gust:
+                            conditions['forecast_gust_kmh'] = forecast_gust
+                            print(f"Forecast gust (display only): {forecast_gust} km/h")
                         
                         if daily_stats.get('max_gust_kmh') is not None:
                             conditions['daily_max_gust_kmh'] = daily_stats['max_gust_kmh']
@@ -539,7 +544,9 @@ def fetch_weather_data():
                         print(f"  Temperature: {conditions.get('temperature', 'N/A')}°C")
                         print(f"  Wind: {conditions.get('wind_direction', 'N/A')} {conditions.get('wind_speed_kmh', 'N/A')} km/h")
                         if 'wind_gust_kmh' in conditions:
-                            print(f"  Current Gust: {conditions['wind_gust_kmh']} km/h")
+                            print(f"  Observed Gust: {conditions['wind_gust_kmh']} km/h")
+                        if 'forecast_gust_kmh' in conditions:
+                            print(f"  Forecast Gust: {conditions['forecast_gust_kmh']} km/h")
                         if daily_stats.get('max_gust_kmh'):
                             print(f"  Daily Max Gust: {daily_stats['max_gust_kmh']} km/h")
                         print(f"  Pressure: {conditions.get('pressure_kpa', 'N/A')} kPa")
