@@ -32,6 +32,7 @@ OUTPUT_DIR = "data"
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "current_conditions.json")
 HISTORY_FILE = os.path.join(OUTPUT_DIR, "temperature_history.json")
 DAILY_STATS_FILE = os.path.join(OUTPUT_DIR, "daily_stats.json")
+PRESSURE_HISTORY_FILE = os.path.join(OUTPUT_DIR, "pressure_history.json")
 
 # Use Mountain Time for day boundaries (UTC-7)
 MT_OFFSET_HOURS = -7
@@ -42,6 +43,71 @@ def get_local_date():
     utc_now = datetime.utcnow()
     mt_now = utc_now + timedelta(hours=MT_OFFSET_HOURS)
     return mt_now.date().isoformat()
+
+
+def update_pressure_history(pressure_kpa, tendency=None):
+    """
+    Update the daily pressure history file with the current reading.
+    Each day gets one record tracking min, max, latest, and reading count.
+    Builds up indefinitely - one entry per day.
+    """
+    today = get_local_date()
+
+    # Load existing history or init empty
+    daily_records = []
+    try:
+        if os.path.exists(PRESSURE_HISTORY_FILE):
+            with open(PRESSURE_HISTORY_FILE, 'r') as f:
+                data = json.load(f)
+                daily_records = data.get('daily_records', [])
+    except (json.JSONDecodeError, IOError) as e:
+        print(f"Could not load pressure history, starting fresh: {e}")
+        daily_records = []
+
+    # Find or create today's entry
+    today_entry = None
+    for record in daily_records:
+        if record.get('date') == today:
+            today_entry = record
+            break
+
+    if today_entry is None:
+        # New day - add fresh entry
+        today_entry = {
+            'date': today,
+            'min_kpa': pressure_kpa,
+            'max_kpa': pressure_kpa,
+            'last_kpa': pressure_kpa,
+            'last_tendency': tendency,
+            'readings': 1
+        }
+        daily_records.append(today_entry)
+        print(f"Started new pressure history entry for {today}: {pressure_kpa} kPa")
+    else:
+        # Update existing entry
+        today_entry['min_kpa'] = min(today_entry['min_kpa'], pressure_kpa)
+        today_entry['max_kpa'] = max(today_entry['max_kpa'], pressure_kpa)
+        today_entry['last_kpa'] = pressure_kpa
+        today_entry['last_tendency'] = tendency
+        today_entry['readings'] = today_entry.get('readings', 0) + 1
+
+    # Sort by date ascending and save
+    daily_records.sort(key=lambda x: x['date'])
+
+    history_data = {
+        'daily_records': daily_records,
+        'last_updated': datetime.utcnow().isoformat() + 'Z',
+        'source': 'Environment Canada RSS - Crowsnest Pass (MSLP kPa)',
+        'note': 'Mean sea level pressure. Recording started Feb 2026.'
+    }
+
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    with open(PRESSURE_HISTORY_FILE, 'w') as f:
+        json.dump(history_data, f, indent=2)
+
+    print(f"✓ Pressure history updated: {today} | {pressure_kpa} kPa {tendency or ''} "
+          f"(day min {today_entry['min_kpa']}, max {today_entry['max_kpa']}, "
+          f"{today_entry['readings']} readings today)")
 
 
 def fetch_historical_temperatures():
@@ -436,6 +502,13 @@ def fetch_weather_data():
                         
                         if daily_stats.get('max_gust_kmh') is not None:
                             conditions['daily_max_gust_kmh'] = daily_stats['max_gust_kmh']
+
+                        # Update pressure history if we have a reading
+                        if 'pressure_kpa' in conditions:
+                            update_pressure_history(
+                                conditions['pressure_kpa'],
+                                conditions.get('pressure_tendency')
+                            )
                         
                         # Fetch historical temperatures from MSC Datamart
                         history_data = fetch_historical_temperatures()
