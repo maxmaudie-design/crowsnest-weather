@@ -1,0 +1,41 @@
+name: Update Historical CSV
+
+on:
+  schedule:
+    # Run daily at 10:15 UTC (4:15am MDT) - offset from the 5-min weather fetch
+    - cron: '15 10 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  update-csv:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: pip install requests
+
+    - name: Update historical CSV and records
+      run: python scripts/update_historical_csv.py
+
+    - name: Commit and push if changed
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add -A data/
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "chore: update historical weather CSV [$(date -u +%Y-%m-%d)]"
+          git push
+        fi
