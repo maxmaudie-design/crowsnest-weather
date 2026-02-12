@@ -84,9 +84,17 @@
         .trend { text-align: center; font-size: 1.1em; color: #666; }
         .trend-up { color: #e74c3c; }
         .trend-down { color: #3498db; }
+        .pressure-chart-container { margin-top: 20px; background: rgba(255,255,255,0.4); border-radius: 10px; padding: 15px; }
+        .pressure-chart-title { font-size: 0.85em; font-weight: 600; color: #5e35b1; margin-bottom: 10px; text-align: center; }
+        .pressure-chart-note { font-size: 0.75em; color: #777; text-align: center; margin-top: 8px; }
         .loading { text-align: center; padding: 40px; color: #999; font-style: italic; }
         .error { background: #fee; color: #c33; padding: 15px; border-radius: 8px; margin: 10px 0; font-size: 0.9em; }
         .timestamp { text-align: center; color: white; opacity: 0.8; margin-top: 20px; font-size: 0.9em; }
+        .source-link { font-size: 0.7em; font-weight: normal; color: #999; }
+        .source-link a { color: #667eea; text-decoration: none; }
+        .source-link a:hover { text-decoration: underline; }
+        .avg-high-badge { font-size: 0.65em; font-weight: normal; color: #888; margin-left: 6px; }
+        .avg-high-badge .temp { font-weight: 600; color: #e74c3c; }
         @media (max-width: 768px) {
             header h1 { font-size: 1.8em; }
             .current-temp { font-size: 3em; }
@@ -112,17 +120,19 @@
     </div>
 
     <script>
-        // Version 2.3 - Fixed forecast records for real this time
+        // Version 2.4 - Added today's high, avg highs, EC source link, pressure chart
         const CONFIG = {
             WEATHER_JSON_URL: './data/current_conditions.json',
             HISTORY_JSON_URL: './data/temperature_history.json',
             RECORDS_JSON_URL: './data/daily_records.json',
+            PRESSURE_HISTORY_URL: './data/pressure_history.json',
             RSS_URL: 'https://weather.gc.ca/rss/weather/49.631_-114.693_e.xml',
+            EC_PAGE_URL: 'https://weather.gc.ca/en/location/index.html?coords=49.631,-114.693',
             GITHUB_RAW_URL: 'https://raw.githubusercontent.com/maxmaudie-design/crowsnest-weather/main/data/',
             CORS_PROXY: 'https://api.allorigins.win/raw?url='
         };
 
-        let currentData = null, historyData = null, dailyStats = null, recordsData = null, forecastData = null;
+        let currentData = null, historyData = null, dailyStats = null, recordsData = null, forecastData = null, pressureHistoryData = null;
 
         const formatTemp = (t) => t == null ? '--' : t.toFixed(1);
         const formatTempInt = (t) => t == null ? '--' : Math.round(t);
@@ -141,6 +151,19 @@
                    date.getDate() === yesterday.getDate();
         }
 
+        function formatUTCtoLocal(utcTimeStr) {
+            if (!utcTimeStr) return '';
+            const match = utcTimeStr.match(/(\d{1,2}):(\d{2})\s*UTC/i);
+            if (!match) return utcTimeStr;
+            const utcH = parseInt(match[1]), utcM = parseInt(match[2]);
+            const now = new Date();
+            const utcDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), utcH, utcM));
+            return utcDate.toLocaleTimeString('en-US', { 
+                hour: 'numeric', minute: '2-digit', 
+                timeZone: 'America/Edmonton'
+            });
+        }
+
         function getWeatherIcon(c) {
             if (!c) return '🌡️';
             const l = c.toLowerCase();
@@ -157,7 +180,6 @@
             return '🌤️';
         }
 
-        // Just fetches and stores forecast data - NO display here
         async function fetchForecast() {
             try {
                 let response = await fetch(CONFIG.CORS_PROXY + encodeURIComponent(CONFIG.RSS_URL)).catch(() => fetch(CONFIG.RSS_URL));
@@ -211,25 +233,22 @@
         }
 
         function displayForecast() {
-            console.log('displayForecast called, recordsData:', recordsData ? 'loaded' : 'null', ', forecastData:', forecastData?.length);
-            
             if (!forecastData?.length) {
-                document.getElementById('forecast-card').innerHTML = `<h2>7-Day Forecast</h2><div class="error">Unable to load. <a href="https://weather.gc.ca/en/location/index.html?coords=49.631,-114.693" target="_blank">View at EC</a></div>`;
+                document.getElementById('forecast-card').innerHTML = `<h2>7-Day Forecast</h2><div class="error">Unable to load. <a href="${CONFIG.EC_PAGE_URL}" target="_blank">View at EC</a></div>`;
                 return;
             }
+            const forecastHighs = forecastData.filter(d => d.high != null).map(d => d.high);
+            const avgForecastHigh = forecastHighs.length > 0 ? (forecastHighs.reduce((a,b) => a+b, 0) / forecastHighs.length) : null;
+            const avgBadge = avgForecastHigh != null ? `<span class="avg-high-badge">Avg High: <span class="temp">${Math.round(avgForecastHigh)}°</span></span>` : '';
             const today = new Date();
             const html = forecastData.map((d, i) => {
                 const fDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + d.offset);
                 const key = getDateKey(fDate);
                 const rec = recordsData?.records_by_day?.[key];
-                
                 let recHtml = '';
                 if (rec) {
                     recHtml = `<div class="forecast-records">📊 Record High: <span class="rec-high">${formatTempInt(rec.record_high)}° (${rec.record_high_year})</span> · Record Low: <span class="rec-low">${formatTempInt(rec.record_low)}° (${rec.record_low_year})</span></div>`;
-                } else {
-                    console.log('No record for key:', key);
                 }
-                
                 return `<div class="forecast-item${i===0?' today':''}">
                     <div class="forecast-main">
                         <span class="forecast-day">${d.day}</span>
@@ -239,55 +258,47 @@
                     ${recHtml}
                 </div>`;
             }).join('');
-            
             document.getElementById('forecast-card').innerHTML = `
-                <h2>7-Day Forecast</h2>
+                <h2>7-Day Forecast ${avgBadge}</h2>
                 <div class="forecast-list">${html}</div>
-                <div style="margin-top:15px;text-align:center;font-size:0.8em;color:#555;"><a href="https://weather.gc.ca/en/location/index.html?coords=49.631,-114.693" target="_blank" style="color:#667eea;">Full forecast →</a></div>
+                <div style="margin-top:15px;text-align:center;font-size:0.8em;color:#555;"><a href="${CONFIG.EC_PAGE_URL}" target="_blank" style="color:#667eea;">Full forecast →</a></div>
             `;
         }
 
         async function fetchRecords() {
             try {
                 const url = CONFIG.RECORDS_JSON_URL + '?v=' + Date.now();
-                console.log('Fetching records from:', url);
                 let r = await fetch(url);
-                if (!r.ok) {
-                    console.log('Local fetch failed, trying GitHub raw...');
-                    r = await fetch(CONFIG.GITHUB_RAW_URL + 'daily_records.json?v=' + Date.now());
-                }
-                if (r.ok) {
-                    recordsData = await r.json();
-                    console.log('Records loaded:', Object.keys(recordsData?.records_by_day || {}).length, 'days');
-                }
-            } catch (e) { 
-                console.error('Records fetch error:', e); 
-            }
+                if (!r.ok) r = await fetch(CONFIG.GITHUB_RAW_URL + 'daily_records.json?v=' + Date.now());
+                if (r.ok) recordsData = await r.json();
+            } catch (e) { console.error('Records fetch error:', e); }
         }
 
         async function fetchHistory() {
             try {
                 const url = CONFIG.HISTORY_JSON_URL + '?v=' + Date.now();
                 let r = await fetch(url);
-                if (!r.ok) {
-                    r = await fetch(CONFIG.GITHUB_RAW_URL + 'temperature_history.json?v=' + Date.now());
-                }
+                if (!r.ok) r = await fetch(CONFIG.GITHUB_RAW_URL + 'temperature_history.json?v=' + Date.now());
                 if (r.ok) historyData = await r.json();
             } catch (e) { console.log('History unavailable:', e); }
         }
 
+        async function fetchPressureHistory() {
+            try {
+                const url = CONFIG.PRESSURE_HISTORY_URL + '?v=' + Date.now();
+                let r = await fetch(url);
+                if (!r.ok) r = await fetch(CONFIG.GITHUB_RAW_URL + 'pressure_history.json?v=' + Date.now());
+                if (r.ok) pressureHistoryData = await r.json();
+            } catch (e) { console.log('Pressure history unavailable:', e); }
+        }
+
         async function fetchAllData() {
             try {
-                console.log('Starting data fetch...');
-                
-                // Fetch all data in parallel
                 await Promise.all([
                     (async () => {
                         const url = CONFIG.WEATHER_JSON_URL + '?v=' + Date.now();
                         let r = await fetch(url);
-                        if (!r.ok) {
-                            r = await fetch(CONFIG.GITHUB_RAW_URL + 'current_conditions.json?v=' + Date.now());
-                        }
+                        if (!r.ok) r = await fetch(CONFIG.GITHUB_RAW_URL + 'current_conditions.json?v=' + Date.now());
                         if (!r.ok) throw new Error('HTTP ' + r.status);
                         const raw = await r.json();
                         dailyStats = raw.daily_stats;
@@ -303,38 +314,32 @@
                             humidity: raw.conditions?.humidity_percent,
                             dewpoint: raw.conditions?.dewpoint
                         };
-                        console.log('Current conditions loaded');
                     })(),
                     fetchHistory(),
                     fetchRecords(),
-                    fetchForecast()
+                    fetchForecast(),
+                    fetchPressureHistory()
                 ]);
-                
-                console.log('All data fetched! Records:', recordsData ? 'yes' : 'no');
-                
-                // NOW display everything - all data is loaded
                 displayCurrent();
                 displayForecast();
                 displayNormals();
                 displayWind();
                 displayPressure();
-                
             } catch (e) {
                 console.error('Error fetching data:', e);
-                document.getElementById('current-card').innerHTML = `<h2>Current Conditions</h2><div class="error">Unable to load. <a href="https://weather.gc.ca/en/location/index.html?coords=49.631,-114.693" target="_blank">View at EC</a></div>`;
+                document.getElementById('current-card').innerHTML = `<h2>Current Conditions</h2><div class="error">Unable to load. <a href="${CONFIG.EC_PAGE_URL}" target="_blank">View at EC</a></div>`;
             }
         }
 
         function displayCurrent() {
             const today = new Date();
             const todayKey = getDateKey(today);
-            
             let todayRecHtml = '';
             const todayRec = recordsData?.records_by_day?.[todayKey];
             if (todayRec) {
                 let brokenHtml = '';
-                if (dailyStats?.max_temp != null && todayRec.record_high != null && dailyStats.max_temp > todayRec.record_high) {
-                    brokenHtml = `<span class="record-broken">🔥 NEW RECORD! ${formatTemp(dailyStats.max_temp)}°C</span>`;
+                if (dailyStats?.high_temp != null && todayRec.record_high != null && dailyStats.high_temp > todayRec.record_high) {
+                    brokenHtml = `<span class="record-broken">🔥 NEW RECORD! ${formatTemp(dailyStats.high_temp)}°C</span>`;
                 }
                 todayRecHtml = `
                     <div class="todays-records">
@@ -354,10 +359,22 @@
                         </div>
                     </div>`;
             }
-            
+            let todayHighHtml = '';
+            if (dailyStats?.high_temp != null) {
+                const timeStr = formatUTCtoLocal(dailyStats.high_temp_time);
+                todayHighHtml = `<div class="detail-row"><span class="detail-label">Today's High</span><span class="detail-value" style="color:#e74c3c">${formatTemp(dailyStats.high_temp)}°C${timeStr ? ` <span style="font-size:0.8em;color:#999;font-weight:normal">at ${timeStr}</span>` : ''}</span></div>`;
+            }
+            let todayLowHtml = '';
+            if (dailyStats?.low_temp != null) {
+                const timeStr = formatUTCtoLocal(dailyStats.low_temp_time);
+                todayLowHtml = `<div class="detail-row"><span class="detail-label">Today's Low</span><span class="detail-value" style="color:#3498db">${formatTemp(dailyStats.low_temp)}°C${timeStr ? ` <span style="font-size:0.8em;color:#999;font-weight:normal">at ${timeStr}</span>` : ''}</span></div>`;
+            }
             let histHtml = '';
             if (historyData?.daily_records?.length) {
-                histHtml = `<div class="history-section"><div class="history-title">Past 7 Days</div>
+                const highs = historyData.daily_records.filter(r => r.high != null).map(r => r.high);
+                const avgHigh = highs.length > 0 ? (highs.reduce((a,b) => a+b, 0) / highs.length) : null;
+                const avgBadge = avgHigh != null ? `<span class="avg-high-badge">Avg High: <span class="temp">${Math.round(avgHigh)}°</span></span>` : '';
+                histHtml = `<div class="history-section"><div class="history-title">Past 7 Days ${avgBadge}</div>
                     ${historyData.daily_records.map(rec => {
                         const date = parseLocalDate(rec.date);
                         const dayLabel = isYesterday(date) 
@@ -365,22 +382,15 @@
                             : date.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
                         const key = getDateKey(date);
                         const dayRec = recordsData?.records_by_day?.[key];
-                        
                         let markers = '';
                         if (dayRec) {
-                            if (rec.high != null && dayRec.record_high != null && rec.high >= dayRec.record_high) {
-                                markers += '<span class="record-marker high">REC HIGH</span>';
-                            }
-                            if (rec.low != null && dayRec.record_low != null && rec.low <= dayRec.record_low) {
-                                markers += '<span class="record-marker low">REC LOW</span>';
-                            }
+                            if (rec.high != null && dayRec.record_high != null && rec.high >= dayRec.record_high) markers += '<span class="record-marker high">REC HIGH</span>';
+                            if (rec.low != null && dayRec.record_low != null && rec.low <= dayRec.record_low) markers += '<span class="record-marker low">REC LOW</span>';
                         }
-                        
                         let recLine = '';
                         if (dayRec) {
                             recLine = `<div class="history-records">📊 Record High: <span class="rec-high">${formatTemp(dayRec.record_high)}° (${dayRec.record_high_year})</span> · Record Low: <span class="rec-low">${formatTemp(dayRec.record_low)}° (${dayRec.record_low_year})</span></div>`;
                         }
-                        
                         return `<div class="history-row">
                             <div class="history-main">
                                 <span class="history-date">${dayLabel}</span>
@@ -391,11 +401,12 @@
                     }).join('')}
                 </div>`;
             }
-            
             document.getElementById('current-card').innerHTML = `
-                <h2>Current Conditions</h2>
+                <h2>Current Conditions <span class="source-link">· <a href="${CONFIG.EC_PAGE_URL}" target="_blank">Environment Canada</a></span></h2>
                 <div class="current-temp">${formatTemp(currentData.temperature)}<span class="unit">°C</span></div>
                 <div class="condition">${currentData.condition||'Not Available'}</div>
+                ${todayHighHtml}
+                ${todayLowHtml}
                 <div class="detail-row"><span class="detail-label">Humidity</span><span class="detail-value">${currentData.humidity||'--'}%</span></div>
                 <div class="detail-row"><span class="detail-label">Dewpoint</span><span class="detail-value">${formatTemp(currentData.dewpoint)}°C</span></div>
                 ${todayRecHtml}
@@ -425,13 +436,114 @@
             if (currentData.tendency?.includes('ris')) { trend = '↗ Rising'; cls = 'trend-up'; }
             else if (currentData.tendency?.includes('fall')) { trend = '↘ Falling'; cls = 'trend-down'; }
             else if (currentData.tendency) { trend = '→ Steady'; }
+            let chartHtml = '';
+            const readings = pressureHistoryData?.hourly_readings;
+            if (readings && readings.length >= 2) {
+                chartHtml = `
+                    <div class="pressure-chart-container">
+                        <div class="pressure-chart-title">72-Hour Pressure History</div>
+                        <canvas id="pressure-chart" width="400" height="160" style="width:100%;height:160px;"></canvas>
+                        <div class="pressure-chart-note">${readings.length} reading${readings.length!==1?'s':''} · Updates hourly</div>
+                    </div>`;
+            } else {
+                chartHtml = `
+                    <div class="pressure-chart-container">
+                        <div class="pressure-chart-title">72-Hour Pressure History</div>
+                        <div style="text-align:center;padding:20px;color:#888;font-size:0.85em;">Building history... (${readings?.length || 0} reading${readings?.length!==1?'s':''} so far)</div>
+                    </div>`;
+            }
             document.getElementById('pressure-card').innerHTML = `
                 <h2>Air Pressure</h2>
                 <div class="pressure-value">${currentData.pressure!=null?currentData.pressure.toFixed(1):'--'} <span style="font-size:0.5em;color:#999">kPa</span></div>
                 ${trend?`<div class="trend ${cls}">${trend}</div>`:''}
                 <div style="text-align:center;margin-top:15px;color:#666;font-size:0.9em">${currentData.pressure?`${(currentData.pressure*10).toFixed(1)} mb | ${(currentData.pressure*0.2953).toFixed(2)} inHg`:''}</div>
+                ${chartHtml}
                 <div style="margin-top:20px;padding:12px;background:rgba(255,255,255,0.3);border-radius:8px;font-size:0.85em;color:#555"><strong>Wind Prediction:</strong> Falling pressure often means wind & storms ahead.</div>
             `;
+            if (readings && readings.length >= 2) {
+                requestAnimationFrame(() => drawPressureChart(readings));
+            }
+        }
+
+        function drawPressureChart(readings) {
+            const canvas = document.getElementById('pressure-chart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            const W = rect.width, H = rect.height;
+            const padding = { top: 20, right: 15, bottom: 30, left: 42 };
+            const chartW = W - padding.left - padding.right;
+            const chartH = H - padding.top - padding.bottom;
+            const values = readings.map(r => r.kpa);
+            const minP = Math.floor(Math.min(...values) * 10) / 10 - 0.1;
+            const maxP = Math.ceil(Math.max(...values) * 10) / 10 + 0.1;
+            const rangeP = maxP - minP || 1;
+            const toX = (i) => padding.left + (i / (readings.length - 1)) * chartW;
+            const toY = (v) => padding.top + chartH - ((v - minP) / rangeP) * chartH;
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.fillRect(padding.left, padding.top, chartW, chartH);
+            ctx.strokeStyle = '#ddd';
+            ctx.lineWidth = 0.5;
+            const gridSteps = 4;
+            for (let i = 0; i <= gridSteps; i++) {
+                const val = minP + (rangeP * i / gridSteps);
+                const y = toY(val);
+                ctx.beginPath();
+                ctx.moveTo(padding.left, y);
+                ctx.lineTo(W - padding.right, y);
+                ctx.stroke();
+                ctx.fillStyle = '#888';
+                ctx.font = '10px sans-serif';
+                ctx.textAlign = 'right';
+                ctx.fillText(val.toFixed(1), padding.left - 4, y + 3);
+            }
+            ctx.fillStyle = '#888';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'center';
+            const labelCount = Math.min(6, readings.length);
+            for (let i = 0; i < labelCount; i++) {
+                const idx = Math.round(i * (readings.length - 1) / (labelCount - 1));
+                const r = readings[idx];
+                const d = new Date(r.hour || '');
+                const label = d.toLocaleTimeString('en-US', { hour: 'numeric', timeZone: 'America/Edmonton' });
+                const dayLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Edmonton' });
+                ctx.fillText(label, toX(idx), H - padding.bottom + 12);
+                if (i === 0 || i === labelCount - 1) {
+                    ctx.fillText(dayLabel, toX(idx), H - padding.bottom + 22);
+                }
+            }
+            ctx.strokeStyle = '#5e35b1';
+            ctx.lineWidth = 2;
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            readings.forEach((r, i) => {
+                const x = toX(i), y = toY(r.kpa);
+                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+            ctx.lineTo(toX(readings.length - 1), padding.top + chartH);
+            ctx.lineTo(toX(0), padding.top + chartH);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(94, 53, 177, 0.1)';
+            ctx.fill();
+            [0, readings.length - 1].forEach(i => {
+                ctx.beginPath();
+                ctx.arc(toX(i), toY(readings[i].kpa), 3, 0, Math.PI * 2);
+                ctx.fillStyle = '#5e35b1';
+                ctx.fill();
+            });
+            ctx.save();
+            ctx.translate(10, padding.top + chartH / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillStyle = '#888';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('kPa', 0, 0);
+            ctx.restore();
         }
 
         function displayNormals() {
@@ -450,11 +562,11 @@
         }
 
         function updateTimestamp() {
-            document.getElementById('timestamp').textContent = `Last updated: ${new Date().toLocaleString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'})} · v2.3`;
+            document.getElementById('timestamp').textContent = `Last updated: ${new Date().toLocaleString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'})} · v2.4`;
         }
 
         async function init() {
-            console.log('Weather dashboard v2.3 starting...');
+            console.log('Weather dashboard v2.4 starting...');
             await fetchAllData();
             updateTimestamp();
             setInterval(async () => { await fetchAllData(); updateTimestamp(); }, 10*60*1000);
