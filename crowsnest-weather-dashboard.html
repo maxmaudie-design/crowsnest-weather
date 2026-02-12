@@ -120,7 +120,7 @@
     </div>
 
     <script>
-        // Version 2.4 - Added today's high, avg highs, EC source link, pressure chart
+        // Version 2.5 - Multiple CORS proxy fallbacks for forecast reliability
         const CONFIG = {
             WEATHER_JSON_URL: './data/current_conditions.json',
             HISTORY_JSON_URL: './data/temperature_history.json',
@@ -129,7 +129,11 @@
             RSS_URL: 'https://weather.gc.ca/rss/weather/49.631_-114.693_e.xml',
             EC_PAGE_URL: 'https://weather.gc.ca/en/location/index.html?coords=49.631,-114.693',
             GITHUB_RAW_URL: 'https://raw.githubusercontent.com/maxmaudie-design/crowsnest-weather/main/data/',
-            CORS_PROXY: 'https://api.allorigins.win/raw?url='
+            CORS_PROXIES: [
+                'https://api.allorigins.win/raw?url=',
+                'https://corsproxy.io/?url=',
+                'https://api.codetabs.com/v1/proxy?quest='
+            ]
         };
 
         let currentData = null, historyData = null, dailyStats = null, recordsData = null, forecastData = null, pressureHistoryData = null;
@@ -180,11 +184,37 @@
             return '🌤️';
         }
 
+        async function fetchWithCorsProxies(url) {
+            for (const proxy of CONFIG.CORS_PROXIES) {
+                try {
+                    const proxyUrl = proxy + encodeURIComponent(url);
+                    console.log('Trying proxy:', proxy.split('//')[1]?.split('/')[0]);
+                    const response = await fetch(proxyUrl, { signal: AbortSignal.timeout(8000) });
+                    if (response.ok) {
+                        const text = await response.text();
+                        if (text.includes('<feed') || text.includes('<entry')) {
+                            console.log('Proxy succeeded:', proxy.split('//')[1]?.split('/')[0]);
+                            return text;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Proxy failed:', proxy.split('//')[1]?.split('/')[0], e.message);
+                }
+            }
+            // Last resort: direct fetch (will fail on GitHub Pages due to CORS, but works locally)
+            try {
+                const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
+                if (response.ok) return await response.text();
+            } catch (e) {
+                console.warn('Direct fetch failed:', e.message);
+            }
+            return null;
+        }
+
         async function fetchForecast() {
             try {
-                let response = await fetch(CONFIG.CORS_PROXY + encodeURIComponent(CONFIG.RSS_URL)).catch(() => fetch(CONFIG.RSS_URL));
-                if (!response.ok) throw new Error('Failed');
-                const xmlText = await response.text();
+                const xmlText = await fetchWithCorsProxies(CONFIG.RSS_URL);
+                if (!xmlText) throw new Error('All proxies failed');
                 const xmlDoc = new DOMParser().parseFromString(xmlText, 'text/xml');
                 const forecasts = [];
                 xmlDoc.querySelectorAll('entry').forEach(entry => {
@@ -562,11 +592,11 @@
         }
 
         function updateTimestamp() {
-            document.getElementById('timestamp').textContent = `Last updated: ${new Date().toLocaleString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'})} · v2.4`;
+            document.getElementById('timestamp').textContent = `Last updated: ${new Date().toLocaleString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'})} · v2.5`;
         }
 
         async function init() {
-            console.log('Weather dashboard v2.4 starting...');
+            console.log('Weather dashboard v2.5 starting...');
             await fetchAllData();
             updateTimestamp();
             setInterval(async () => { await fetchAllData(); updateTimestamp(); }, 10*60*1000);
