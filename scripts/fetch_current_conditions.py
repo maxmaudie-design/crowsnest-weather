@@ -49,20 +49,26 @@ def update_pressure_history(pressure_kpa, tendency=None):
     """
     Update the daily pressure history file with the current reading.
     Each day gets one record tracking min, max, latest, and reading count.
+    Also maintains hourly_readings array for 72-hour pressure chart.
     Builds up indefinitely - one entry per day.
     """
     today = get_local_date()
+    now_utc = datetime.utcnow()
+    current_hour = now_utc.strftime('%Y-%m-%dT%H:00:00Z')
 
     # Load existing history or init empty
     daily_records = []
+    hourly_readings = []
     try:
         if os.path.exists(PRESSURE_HISTORY_FILE):
             with open(PRESSURE_HISTORY_FILE, 'r') as f:
                 data = json.load(f)
                 daily_records = data.get('daily_records', [])
+                hourly_readings = data.get('hourly_readings', [])
     except (json.JSONDecodeError, IOError) as e:
         print(f"Could not load pressure history, starting fresh: {e}")
         daily_records = []
+        hourly_readings = []
 
     # Find or create today's entry
     today_entry = None
@@ -91,11 +97,29 @@ def update_pressure_history(pressure_kpa, tendency=None):
         today_entry['last_tendency'] = tendency
         today_entry['readings'] = today_entry.get('readings', 0) + 1
 
-    # Sort by date ascending and save
+    # --- Update hourly readings for 72-hour chart ---
+    # One reading per hour; update existing hour or add new
+    if hourly_readings and hourly_readings[-1].get('hour') == current_hour:
+        # Same hour - just update the reading
+        hourly_readings[-1]['kpa'] = pressure_kpa
+        hourly_readings[-1]['tendency'] = tendency
+    else:
+        # New hour - add entry
+        hourly_readings.append({
+            'hour': current_hour,
+            'kpa': pressure_kpa,
+            'tendency': tendency
+        })
+
+    # Keep only last 72 hours
+    hourly_readings = hourly_readings[-72:]
+
+    # Sort daily records by date ascending and save
     daily_records.sort(key=lambda x: x['date'])
 
     history_data = {
         'daily_records': daily_records,
+        'hourly_readings': hourly_readings,
         'last_updated': datetime.utcnow().isoformat() + 'Z',
         'source': 'Environment Canada RSS - Crowsnest Pass (MSLP kPa)',
         'note': 'Mean sea level pressure. Recording started Feb 2026.'
@@ -105,9 +129,9 @@ def update_pressure_history(pressure_kpa, tendency=None):
     with open(PRESSURE_HISTORY_FILE, 'w') as f:
         json.dump(history_data, f, indent=2)
 
-    print(f"✓ Pressure history updated: {today} | {pressure_kpa} kPa {tendency or ''} "
+    print(f"\u2713 Pressure history updated: {today} | {pressure_kpa} kPa {tendency or ''} "
           f"(day min {today_entry['min_kpa']}, max {today_entry['max_kpa']}, "
-          f"{today_entry['readings']} readings today)")
+          f"{today_entry['readings']} readings today, {len(hourly_readings)} hourly entries)")
 
 
 def fetch_historical_temperatures():
@@ -144,8 +168,8 @@ def fetch_historical_temperatures():
                             continue
                         
                         # Get max/min temps - try different column names
-                        max_temp_str = row.get('MAX_TEMPERATURE', row.get('Max Temp (°C)', row.get('MAX_TEMP', '')))
-                        min_temp_str = row.get('MIN_TEMPERATURE', row.get('Min Temp (°C)', row.get('MIN_TEMP', '')))
+                        max_temp_str = row.get('MAX_TEMPERATURE', row.get('Max Temp (\u00b0C)', row.get('MAX_TEMP', '')))
+                        min_temp_str = row.get('MIN_TEMPERATURE', row.get('Min Temp (\u00b0C)', row.get('MIN_TEMP', '')))
                         
                         if not max_temp_str or not min_temp_str:
                             continue
@@ -176,7 +200,7 @@ def fetch_historical_temperatures():
                 continue
         
         if not history_records:
-            print("⚠ No historical records found from MSC Datamart")
+            print("\u26a0 No historical records found from MSC Datamart")
             return None
         
         # Remove duplicates and sort by date descending
@@ -200,14 +224,14 @@ def fetch_historical_temperatures():
         with open(HISTORY_FILE, 'w') as f:
             json.dump(history_data, f, indent=2)
         
-        print(f"✓ Saved {len(unique_records)} days of temperature history")
+        print(f"\u2713 Saved {len(unique_records)} days of temperature history")
         for r in unique_records:
-            print(f"    {r['date']}: High {r['high']}°C, Low {r['low']}°C")
+            print(f"    {r['date']}: High {r['high']}\u00b0C, Low {r['low']}\u00b0C")
         
         return history_data
         
     except Exception as e:
-        print(f"⚠ Error fetching historical data: {e}")
+        print(f"\u26a0 Error fetching historical data: {e}")
         import traceback
         traceback.print_exc()
         return None
@@ -528,7 +552,9 @@ def fetch_weather_data():
                                 "max_gust_kmh": daily_stats.get('max_gust_kmh'),
                                 "max_gust_time": daily_stats.get('max_gust_time'),
                                 "high_temp": daily_stats.get('high_temp'),
-                                "low_temp": daily_stats.get('low_temp')
+                                "high_temp_time": daily_stats.get('high_temp_time'),
+                                "low_temp": daily_stats.get('low_temp'),
+                                "low_temp_time": daily_stats.get('low_temp_time')
                             },
                             "observation_time": observation_time or "Unknown",
                             "fetch_time_utc": datetime.utcnow().isoformat() + 'Z'
@@ -539,9 +565,9 @@ def fetch_weather_data():
                         with open(OUTPUT_FILE, 'w') as f:
                             json.dump(full_data, f, indent=2)
                         
-                        print(f"✓ Weather data saved to {OUTPUT_FILE}")
+                        print(f"\u2713 Weather data saved to {OUTPUT_FILE}")
                         print(f"  Condition: {conditions.get('condition', 'N/A')}")
-                        print(f"  Temperature: {conditions.get('temperature', 'N/A')}°C")
+                        print(f"  Temperature: {conditions.get('temperature', 'N/A')}\u00b0C")
                         print(f"  Wind: {conditions.get('wind_direction', 'N/A')} {conditions.get('wind_speed_kmh', 'N/A')} km/h")
                         if 'wind_gust_kmh' in conditions:
                             print(f"  Observed Gust: {conditions['wind_gust_kmh']} km/h")
@@ -554,15 +580,15 @@ def fetch_weather_data():
                             print(f"  Temperature History: {len(history_data.get('daily_records', []))} days")
                         return True
                     else:
-                        print("✗ Summary text was empty")
+                        print("\u2717 Summary text was empty")
                 else:
-                    print("✗ No summary element found")
+                    print("\u2717 No summary element found")
         
-        print("✗ Could not find current conditions in RSS feed")
+        print("\u2717 Could not find current conditions in RSS feed")
         return False
         
     except Exception as e:
-        print(f"✗ Unexpected error: {e}")
+        print(f"\u2717 Unexpected error: {e}")
         import traceback
         traceback.print_exc()
         return False
