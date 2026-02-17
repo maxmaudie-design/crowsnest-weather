@@ -1,6 +1,11 @@
 {
   "daily_records": [
     {
+      "date": "2026-02-16",
+      "high": -0.5,
+      "low": -2.7
+    },
+    {
       "date": "2026-02-15",
       "high": 1.9,
       "low": -3.0
@@ -31,6 +36,6 @@
       "low": -1.6
     }
   ],
-  "last_updated": "2026-02-17T12:29:37.762512Z",
+  "last_updated": "2026-02-17T13:44:47.509740Z",
   "source": "Environment Canada MSC Datamart - Station 3051R4R"
 }
