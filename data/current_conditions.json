@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-02-20T22:20:49.419177Z",
+  "timestamp": "2026-02-20T22:49:11.903753Z",
   "source": "Environment Canada",
   "location": "Crowsnest Pass, AB",
   "conditions": {
@@ -8,7 +8,7 @@
     "pressure_tendency": "rising",
     "humidity_percent": 46,
     "dewpoint": -15.0,
-    "condition": "Partly cloudy"
+    "condition": "A few clouds"
   },
   "daily_stats": {
     "date": "2026-02-20",
@@ -20,5 +20,5 @@
     "low_temp_time": "08:29 UTC"
   },
   "observation_time": "2026-02-20T22:00:00Z",
-  "fetch_time_utc": "2026-02-20T22:20:49.419184Z"
+  "fetch_time_utc": "2026-02-20T22:49:11.903760Z"
 }
