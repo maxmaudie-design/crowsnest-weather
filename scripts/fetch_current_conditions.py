@@ -458,7 +458,14 @@ def parse_current_conditions(summary_text):
         conditions['dewpoint'] = float(dew_match.group(1))
         print(f"Found dewpoint: {conditions['dewpoint']}")
     
-    wind_match = re.search(r'Wind[:\s]+(.+?)(?=Air Quality|Pressure|Humidity|Dewpoint|Observed|$)', summary_text, re.IGNORECASE | re.DOTALL)
+    # Wind Chill - parse separately BEFORE wind to avoid confusion
+    windchill_match = re.search(r'Wind\s*Chill[:\s]+(-?\d+\.?\d*)', summary_text, re.IGNORECASE)
+    if windchill_match:
+        conditions['wind_chill'] = float(windchill_match.group(1))
+        print(f"Found wind chill: {conditions['wind_chill']}")
+    
+    # Wind - use negative lookahead to skip "Wind Chill"
+    wind_match = re.search(r'Wind(?!\s*Chill)[:\s]+(.+?)(?=Air Quality|$)', summary_text, re.IGNORECASE | re.DOTALL)
     if wind_match:
         wind_text = wind_match.group(1).strip()
         print(f"Wind text: {wind_text}")
@@ -576,6 +583,8 @@ def fetch_weather_data():
                         if daily_stats.get('max_gust_kmh'):
                             print(f"  Daily Max Gust: {daily_stats['max_gust_kmh']} km/h")
                         print(f"  Pressure: {conditions.get('pressure_kpa', 'N/A')} kPa")
+                        if 'wind_chill' in conditions:
+                            print(f"  Wind Chill: {conditions['wind_chill']}")
                         if history_data:
                             print(f"  Temperature History: {len(history_data.get('daily_records', []))} days")
                         return True
