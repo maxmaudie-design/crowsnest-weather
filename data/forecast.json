@@ -1,0 +1,61 @@
+{
+  "fetched_at": "2026-02-21T21:18:28.731665+00:00",
+  "forecast": [
+    {
+      "day": "Saturday",
+      "condition": "Mainly sunny",
+      "icon": "\u2600\ufe0f",
+      "high": -10,
+      "low": -21,
+      "offset": 0
+    },
+    {
+      "day": "Sunday",
+      "condition": "Mainly sunny",
+      "icon": "\u2600\ufe0f",
+      "high": 0,
+      "low": -8,
+      "offset": 1
+    },
+    {
+      "day": "Monday",
+      "condition": "Chance of showers",
+      "icon": "\ud83c\udf27\ufe0f",
+      "high": null,
+      "low": -2,
+      "offset": 2
+    },
+    {
+      "day": "Tuesday",
+      "condition": "A mix of sun and cloud",
+      "icon": "\ud83c\udf28\ufe0f",
+      "high": 0,
+      "low": -3,
+      "offset": 3
+    },
+    {
+      "day": "Wednesday",
+      "condition": "A mix of sun and cloud",
+      "icon": "\ud83c\udf28\ufe0f",
+      "high": null,
+      "low": null,
+      "offset": 4
+    },
+    {
+      "day": "Thursday",
+      "condition": "A mix of sun and cloud",
+      "icon": "\ud83c\udf28\ufe0f",
+      "high": 9,
+      "low": -5,
+      "offset": 5
+    },
+    {
+      "day": "Friday",
+      "condition": "Cloudy",
+      "icon": "\u2601\ufe0f",
+      "high": -2,
+      "low": null,
+      "offset": 6
+    }
+  ]
+}
