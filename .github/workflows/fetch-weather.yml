@@ -28,8 +28,11 @@ jobs:
       run: |
         pip install requests
         
-    - name: Fetch weather data
+    - name: Fetch current conditions
       run: python scripts/fetch_current_conditions.py
+
+    - name: Fetch forecast
+      run: python scripts/fetch_forecast.py
       
     - name: Commit and push if changed
       run: |
