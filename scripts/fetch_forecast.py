@@ -37,16 +37,24 @@ def get_weather_icon(condition):
     return '🌤️'
 
 def parse_temp(title, keyword):
-    """Parse High or Low temp from title string."""
-    pattern = rf'{keyword}\s+(minus\s+)?(\d+|zero)'
+    pattern = rf'{keyword}\s+(minus\s+)?(zero|\d+)'
     m = re.search(pattern, title, re.IGNORECASE)
     if not m:
         return None
     raw = m.group(2).lower()
     val = 0 if raw == 'zero' else int(raw)
-    if m.group(1):  # "minus"
+    if m.group(1):
         val = -val
     return val
+
+def parse_condition(title):
+    """Extract condition text, stripping High/Low/POP suffixes."""
+    m = re.search(r':\s*(.+)', title)
+    if not m:
+        return ''
+    rest = m.group(1).strip()
+    rest = re.sub(r'\.\s*(High|Low|POP)\b.*', '', rest, flags=re.IGNORECASE)
+    return rest.strip(' .')
 
 def is_night(title):
     t = title.lower()
@@ -60,21 +68,17 @@ def fetch_forecast():
     entries = []
     for entry in root.findall('atom:entry', NAMESPACE):
         title_el = entry.find('atom:title', NAMESPACE)
-        summary_el = entry.find('atom:summary', NAMESPACE)
         category_el = entry.find('atom:category', NAMESPACE)
         if category_el is None or category_el.get('term') != 'Weather Forecasts':
             continue
         title = title_el.text if title_el is not None else ''
-        summary = summary_el.text if summary_el is not None else ''
 
         night = is_night(title)
         high = parse_temp(title, 'High')
         low = parse_temp(title, 'Low')
-
+        condition = parse_condition(title)
         day_match = re.match(r'^(\w+)', title)
         day = day_match.group(1) if day_match else ''
-        cond_match = re.search(r':\s*(.+?)(?:\.\s*(?:High|Low|POP)|$)', title)
-        condition = cond_match.group(1).strip() if cond_match else ''
 
         entries.append({
             'day': day,
@@ -85,14 +89,13 @@ def fetch_forecast():
             'icon': get_weather_icon(condition)
         })
 
-    # Skip any leading night entries (remainder of current night)
+    # Skip leading night entries (remainder of current night)
     while entries and entries[0]['is_night']:
         entries.pop(0)
 
-    # Pair day + night entries
+    # Pair day + night - no offset stored, browser uses array index
     combined = []
     i = 0
-    offset = 0
     while i < len(entries) and len(combined) < 7:
         cur = entries[i]
         nxt = entries[i + 1] if i + 1 < len(entries) else None
@@ -104,7 +107,6 @@ def fetch_forecast():
                 'icon': cur['icon'],
                 'high': cur['high'],
                 'low': nxt['low'],
-                'offset': offset
             })
             i += 2
         elif not cur['is_night']:
@@ -114,13 +116,10 @@ def fetch_forecast():
                 'icon': cur['icon'],
                 'high': cur['high'],
                 'low': None,
-                'offset': offset
             })
             i += 1
         else:
-            # Orphaned night entry, skip
             i += 1
-        offset += 1
 
     result = {
         'fetched_at': datetime.now(timezone.utc).isoformat(),
@@ -131,6 +130,8 @@ def fetch_forecast():
         json.dump(result, f, indent=2)
 
     print(f"Forecast saved: {len(combined)} days")
+    for d in combined:
+        print(f"  {d['day']}: High={d['high']}, Low={d['low']}, Condition={d['condition']}")
 
 if __name__ == '__main__':
     fetch_forecast()

@@ -85,6 +85,13 @@
         .trend { text-align: center; font-size: 1.1em; color: #666; }
         .trend-up { color: #e74c3c; }
         .trend-down { color: #3498db; }
+        .pressure-deltas { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+        .pressure-delta { text-align: center; padding: 10px; background: rgba(255,255,255,0.35); border-radius: 10px; }
+        .pressure-delta .delta-label { font-size: 0.75em; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .pressure-delta .delta-value { font-size: 1.2em; font-weight: bold; }
+        .delta-up { color: #e74c3c; }
+        .delta-down { color: #3498db; }
+        .delta-flat { color: #777; }
         .pressure-chart-container { margin-top: 20px; background: rgba(255,255,255,0.4); border-radius: 10px; padding: 15px; }
         .pressure-chart-title { font-size: 0.85em; font-weight: 600; color: #5e35b1; margin-bottom: 10px; text-align: center; }
         .pressure-chart-note { font-size: 0.75em; color: #777; text-align: center; margin-top: 8px; }
@@ -121,7 +128,7 @@
     </div>
 
     <script>
-        // Version 3.0 - Server-side forecast fetch, instant load, fixed pairing
+        // Version 3.1 - Fixed forecast offsets/conditions, added pressure deltas
         const CONFIG = {
             WEATHER_JSON_URL: './data/current_conditions.json',
             HISTORY_JSON_URL: './data/temperature_history.json',
@@ -186,10 +193,49 @@
             return '🌤️';
         }
 
-        // ── Forecast: try pre-fetched JSON first, fall back to live RSS via CORS proxies ──
+        function parseConditionFromTitle(title) {
+            const m = title.match(/:\s*(.+)/);
+            if (!m) return '';
+            let rest = m[1].trim();
+            rest = rest.replace(/\.\s*(High|Low|POP)\b.*/i, '');
+            return rest.trim().replace(/\.$/, '');
+        }
 
+        function parseTempFromTitle(title, keyword) {
+            const m = title.match(new RegExp(`${keyword}\\s+(minus\\s+)?(zero|\\d+)`, 'i'));
+            if (!m) return null;
+            const val = m[2].toLowerCase() === 'zero' ? 0 : parseInt(m[2]);
+            return m[1] ? -val : val;
+        }
+
+        // ── Pressure delta helpers ──
+        function getPressureDelta(readings, hoursAgo) {
+            if (!readings || readings.length < 2) return null;
+            const now = new Date(readings[readings.length - 1].hour);
+            const targetTime = new Date(now.getTime() - hoursAgo * 60 * 60 * 1000);
+            // Find reading closest to target time
+            let closest = null, minDiff = Infinity;
+            for (const r of readings) {
+                const diff = Math.abs(new Date(r.hour) - targetTime);
+                if (diff < minDiff) { minDiff = diff; closest = r; }
+            }
+            if (!closest || minDiff > 2 * 60 * 60 * 1000) return null; // >2h gap, skip
+            const current = readings[readings.length - 1].kpa;
+            return (current - closest.kpa).toFixed(2);
+        }
+
+        function formatDelta(delta) {
+            if (delta === null) return { text: '--', cls: 'delta-flat' };
+            const n = parseFloat(delta);
+            if (Math.abs(n) < 0.05) return { text: '→ 0.00 kPa', cls: 'delta-flat' };
+            const arrow = n > 0 ? '↑' : '↓';
+            const cls = n > 0 ? 'delta-up' : 'delta-down';
+            return { text: `${arrow} ${Math.abs(n).toFixed(2)} kPa`, cls };
+        }
+
+        // ── Forecast fetching ──
         async function fetchForecast() {
-            // 1. Try server-side pre-fetched forecast.json (fast, no CORS issues)
+            // 1. Try pre-fetched forecast.json
             try {
                 const url = CONFIG.FORECAST_JSON_URL + '?v=' + Date.now();
                 let r = await fetch(url);
@@ -198,7 +244,7 @@
                     const json = await r.json();
                     if (json.forecast && json.forecast.length > 0) {
                         forecastData = json.forecast;
-                        console.log('Forecast loaded from pre-fetched JSON:', forecastData.length, 'days');
+                        console.log('Forecast from JSON:', forecastData.length, 'days');
                         return;
                     }
                 }
@@ -216,46 +262,30 @@
                     const title = entry.querySelector('title')?.textContent || '';
                     if (!title.match(/^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Tonight|Today)/i)) return;
                     const isNight = /night|tonight/i.test(title);
-                    const highMatch = title.match(/High\s+(minus\s+)?(zero|\d+)/i);
-                    const lowMatch = title.match(/Low\s+(minus\s+)?(zero|\d+)/i);
-                    const parseVal = (m) => {
-                        if (!m) return null;
-                        const v = m[2].toLowerCase() === 'zero' ? 0 : parseInt(m[2]);
-                        return m[1] ? -v : v;
-                    };
-                    const condMatch = title.match(/:\s*(.+?)(?:\.\s*(?:High|Low|POP)|$)/);
-                    const dayMatch = title.match(/^(\w+)/);
                     rawEntries.push({
-                        day: dayMatch?.[1] || '',
-                        condition: condMatch?.[1]?.trim() || '',
-                        high: parseVal(highMatch),
-                        low: parseVal(lowMatch),
+                        day: (title.match(/^(\w+)/) || [])[1] || '',
+                        condition: parseConditionFromTitle(title),
+                        high: parseTempFromTitle(title, 'High'),
+                        low: parseTempFromTitle(title, 'Low'),
                         is_night: isNight,
-                        icon: getWeatherIcon(condMatch?.[1] || '')
+                        icon: getWeatherIcon(parseConditionFromTitle(title))
                     });
                 });
-
-                // Skip leading night entries
                 while (rawEntries.length && rawEntries[0].is_night) rawEntries.shift();
-
-                // Pair day + night
                 const combined = [];
-                let i = 0, offset = 0;
+                let i = 0;
                 while (i < rawEntries.length && combined.length < 7) {
                     const cur = rawEntries[i], nxt = rawEntries[i + 1];
                     if (!cur.is_night && nxt?.is_night) {
-                        combined.push({ day: cur.day, condition: cur.condition, icon: cur.icon, high: cur.high, low: nxt.low, offset });
+                        combined.push({ day: cur.day, condition: cur.condition, icon: cur.icon, high: cur.high, low: nxt.low });
                         i += 2;
                     } else if (!cur.is_night) {
-                        combined.push({ day: cur.day, condition: cur.condition, icon: cur.icon, high: cur.high, low: null, offset });
+                        combined.push({ day: cur.day, condition: cur.condition, icon: cur.icon, high: cur.high, low: null });
                         i++;
-                    } else {
-                        i++; // orphaned night, skip
-                    }
-                    offset++;
+                    } else { i++; }
                 }
                 forecastData = combined;
-                console.log('Forecast loaded from live RSS:', forecastData.length, 'days');
+                console.log('Forecast from RSS:', forecastData.length, 'days');
             } catch (e) {
                 console.error('Forecast RSS error:', e);
                 forecastData = null;
@@ -265,15 +295,12 @@
         async function fetchWithCorsProxies(url) {
             for (const proxy of CONFIG.CORS_PROXIES) {
                 try {
-                    const proxyUrl = proxy + encodeURIComponent(url);
-                    const response = await fetch(proxyUrl, { signal: AbortSignal.timeout(5000) });
-                    if (response.ok) {
-                        const text = await response.text();
+                    const r = await fetch(proxy + encodeURIComponent(url), { signal: AbortSignal.timeout(5000) });
+                    if (r.ok) {
+                        const text = await r.text();
                         if (text.includes('<feed') || text.includes('<entry')) return text;
                     }
-                } catch (e) {
-                    console.warn('Proxy failed:', proxy, e.message);
-                }
+                } catch (e) { console.warn('Proxy failed:', proxy, e.message); }
             }
             return null;
         }
@@ -287,8 +314,9 @@
             const avgForecastHigh = forecastHighs.length > 0 ? (forecastHighs.reduce((a,b) => a+b, 0) / forecastHighs.length) : null;
             const avgBadge = avgForecastHigh != null ? `<span class="avg-high-badge">Avg High: <span class="temp">${Math.round(avgForecastHigh)}°</span></span>` : '';
             const today = new Date();
+            // Use array index i as the day offset - day 0 = today, day 1 = tomorrow, etc.
             const html = forecastData.map((d, i) => {
-                const fDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + d.offset);
+                const fDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
                 const key = getDateKey(fDate);
                 const rec = recordsData?.records_by_day?.[key];
                 let recHtml = '';
@@ -364,26 +392,21 @@
 
         async function fetchAllData() {
             try {
-                // Phase 1: Load core data fast (all local JSON, no proxies)
                 await Promise.all([
                     fetchCoreData(),
                     fetchHistory(),
                     fetchRecords(),
                     fetchPressureHistory()
                 ]);
-
-                // Render everything we have immediately
                 displayCurrent();
                 displayNormals();
                 displayWind();
                 displayPressure();
                 updateTimestamp();
 
-                // Phase 2: Load forecast in background (may use CORS proxies as fallback)
                 document.getElementById('forecast-card').innerHTML = `<h2>7-Day Forecast</h2><div class="loading">Loading forecast...</div>`;
                 await fetchForecast();
                 displayForecast();
-
             } catch (e) {
                 console.error('Error fetching data:', e);
                 document.getElementById('current-card').innerHTML = `<h2>Current Conditions</h2><div class="error">Unable to load. <a href="${CONFIG.EC_PAGE_URL}" target="_blank">View at EC</a></div>`;
@@ -504,8 +527,28 @@
             if (currentData.tendency?.includes('ris')) { trend = '↗ Rising'; cls = 'trend-up'; }
             else if (currentData.tendency?.includes('fall')) { trend = '↘ Falling'; cls = 'trend-down'; }
             else if (currentData.tendency) { trend = '→ Steady'; }
-            let chartHtml = '';
+
             const readings = pressureHistoryData?.hourly_readings;
+
+            // Compute 24h and 72h deltas
+            const delta24 = getPressureDelta(readings, 24);
+            const delta72 = getPressureDelta(readings, 72);
+            const fmt24 = formatDelta(delta24);
+            const fmt72 = formatDelta(delta72);
+
+            const deltasHtml = `
+                <div class="pressure-deltas">
+                    <div class="pressure-delta">
+                        <div class="delta-label">24h Change</div>
+                        <div class="delta-value ${fmt24.cls}">${fmt24.text}</div>
+                    </div>
+                    <div class="pressure-delta">
+                        <div class="delta-label">72h Change</div>
+                        <div class="delta-value ${fmt72.cls}">${fmt72.text}</div>
+                    </div>
+                </div>`;
+
+            let chartHtml = '';
             if (readings && readings.length >= 2) {
                 chartHtml = `
                     <div class="pressure-chart-container">
@@ -520,11 +563,13 @@
                         <div style="text-align:center;padding:20px;color:#888;font-size:0.85em;">Building history... (${readings?.length || 0} reading${readings?.length!==1?'s':''} so far)</div>
                     </div>`;
             }
+
             document.getElementById('pressure-card').innerHTML = `
                 <h2>Air Pressure</h2>
                 <div class="pressure-value">${currentData.pressure!=null?currentData.pressure.toFixed(1):'--'} <span style="font-size:0.5em;color:#999">kPa</span></div>
                 ${trend?`<div class="trend ${cls}">${trend}</div>`:''}
                 <div style="text-align:center;margin-top:15px;color:#666;font-size:0.9em">${currentData.pressure?`${(currentData.pressure*10).toFixed(1)} mb | ${(currentData.pressure*0.2953).toFixed(2)} inHg`:''}</div>
+                ${deltasHtml}
                 ${chartHtml}
                 <div style="margin-top:20px;padding:12px;background:rgba(255,255,255,0.3);border-radius:8px;font-size:0.85em;color:#555"><strong>Wind Prediction:</strong> Falling pressure often means wind & storms ahead.</div>
             `;
@@ -556,62 +601,36 @@
             ctx.fillRect(padding.left, padding.top, chartW, chartH);
             ctx.strokeStyle = '#ddd';
             ctx.lineWidth = 0.5;
-            const gridSteps = 4;
-            for (let i = 0; i <= gridSteps; i++) {
-                const val = minP + (rangeP * i / gridSteps);
+            for (let i = 0; i <= 4; i++) {
+                const val = minP + (rangeP * i / 4);
                 const y = toY(val);
-                ctx.beginPath();
-                ctx.moveTo(padding.left, y);
-                ctx.lineTo(W - padding.right, y);
-                ctx.stroke();
-                ctx.fillStyle = '#888';
-                ctx.font = '10px sans-serif';
-                ctx.textAlign = 'right';
+                ctx.beginPath(); ctx.moveTo(padding.left, y); ctx.lineTo(W - padding.right, y); ctx.stroke();
+                ctx.fillStyle = '#888'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
                 ctx.fillText(val.toFixed(1), padding.left - 4, y + 3);
             }
-            ctx.fillStyle = '#888';
-            ctx.font = '10px sans-serif';
-            ctx.textAlign = 'center';
+            ctx.fillStyle = '#888'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
             const labelCount = Math.min(6, readings.length);
             for (let i = 0; i < labelCount; i++) {
                 const idx = Math.round(i * (readings.length - 1) / (labelCount - 1));
                 const r = readings[idx];
                 const d = new Date(r.hour || '');
-                const label = d.toLocaleTimeString('en-US', { hour: 'numeric', timeZone: 'America/Edmonton' });
-                const dayLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Edmonton' });
-                ctx.fillText(label, toX(idx), H - padding.bottom + 12);
-                if (i === 0 || i === labelCount - 1) {
-                    ctx.fillText(dayLabel, toX(idx), H - padding.bottom + 22);
-                }
+                ctx.fillText(d.toLocaleTimeString('en-US', { hour: 'numeric', timeZone: 'America/Edmonton' }), toX(idx), H - padding.bottom + 12);
+                if (i === 0 || i === labelCount - 1) ctx.fillText(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/Edmonton' }), toX(idx), H - padding.bottom + 22);
             }
-            ctx.strokeStyle = '#5e35b1';
-            ctx.lineWidth = 2;
-            ctx.lineJoin = 'round';
-            ctx.beginPath();
-            readings.forEach((r, i) => {
-                const x = toX(i), y = toY(r.kpa);
-                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-            });
+            ctx.strokeStyle = '#5e35b1'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.beginPath();
+            readings.forEach((r, i) => { const x = toX(i), y = toY(r.kpa); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); });
             ctx.stroke();
             ctx.lineTo(toX(readings.length - 1), padding.top + chartH);
             ctx.lineTo(toX(0), padding.top + chartH);
             ctx.closePath();
-            ctx.fillStyle = 'rgba(94, 53, 177, 0.1)';
-            ctx.fill();
+            ctx.fillStyle = 'rgba(94, 53, 177, 0.1)'; ctx.fill();
             [0, readings.length - 1].forEach(i => {
-                ctx.beginPath();
-                ctx.arc(toX(i), toY(readings[i].kpa), 3, 0, Math.PI * 2);
-                ctx.fillStyle = '#5e35b1';
-                ctx.fill();
+                ctx.beginPath(); ctx.arc(toX(i), toY(readings[i].kpa), 3, 0, Math.PI * 2);
+                ctx.fillStyle = '#5e35b1'; ctx.fill();
             });
-            ctx.save();
-            ctx.translate(10, padding.top + chartH / 2);
-            ctx.rotate(-Math.PI / 2);
-            ctx.fillStyle = '#888';
-            ctx.font = '10px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('kPa', 0, 0);
-            ctx.restore();
+            ctx.save(); ctx.translate(10, padding.top + chartH / 2); ctx.rotate(-Math.PI / 2);
+            ctx.fillStyle = '#888'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('kPa', 0, 0); ctx.restore();
         }
 
         function displayNormals() {
@@ -630,11 +649,11 @@
         }
 
         function updateTimestamp() {
-            document.getElementById('timestamp').textContent = `Last updated: ${new Date().toLocaleString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'})} · v3.0`;
+            document.getElementById('timestamp').textContent = `Last updated: ${new Date().toLocaleString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'})} · v3.1`;
         }
 
         async function init() {
-            console.log('Weather dashboard v3.0 starting...');
+            console.log('Weather dashboard v3.1 starting...');
             await fetchAllData();
             setInterval(async () => { await fetchAllData(); }, 10*60*1000);
         }
