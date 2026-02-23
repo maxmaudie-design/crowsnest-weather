@@ -1,11 +1,11 @@
 {
-  "fetched_at": "2026-02-23T05:50:30.853494+00:00",
+  "fetched_at": "2026-02-23T06:47:11.516745+00:00",
   "forecast": [
     {
       "day": "Monday",
       "condition": "A mix of sun and cloud",
       "icon": "\ud83c\udf28\ufe0f",
-      "high": 6,
+      "high": 8,
       "low": -8
     },
     {
