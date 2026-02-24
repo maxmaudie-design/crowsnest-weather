@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-02-24T22:16:25.822165Z",
+  "timestamp": "2026-02-24T22:53:52.379749Z",
   "source": "Environment Canada",
   "location": "Crowsnest Pass, AB",
   "conditions": {
@@ -25,5 +25,5 @@
     "low_temp_time": "15:33 UTC"
   },
   "observation_time": "2026-02-24T22:00:00Z",
-  "fetch_time_utc": "2026-02-24T22:16:25.822171Z"
+  "fetch_time_utc": "2026-02-24T22:53:52.379756Z"
 }
