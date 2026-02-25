@@ -4,8 +4,8 @@
   "max_gust_time": "15:11 UTC",
   "max_wind_kmh": 32,
   "max_wind_time": "15:11 UTC",
-  "high_temp": -0.5,
-  "high_temp_time": "17:30 UTC",
+  "high_temp": 0.1,
+  "high_temp_time": "18:35 UTC",
   "low_temp": -2.2,
   "low_temp_time": "10:51 UTC"
 }
