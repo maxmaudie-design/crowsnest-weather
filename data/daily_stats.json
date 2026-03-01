@@ -1,11 +1,11 @@
 {
   "date": "2026-03-01",
-  "max_gust_kmh": 31,
-  "max_gust_time": "17:23 UTC",
-  "max_wind_kmh": 20,
-  "max_wind_time": "17:23 UTC",
-  "high_temp": 2.7,
-  "high_temp_time": "17:23 UTC",
+  "max_gust_kmh": 41,
+  "max_gust_time": "18:18 UTC",
+  "max_wind_kmh": 26,
+  "max_wind_time": "18:18 UTC",
+  "high_temp": 4.2,
+  "high_temp_time": "18:18 UTC",
   "low_temp": -13.1,
   "low_temp_time": "07:35 UTC"
 }
