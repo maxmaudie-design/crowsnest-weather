@@ -1,26 +1,19 @@
 {
-  "fetched_at": "2026-03-12T21:20:30.672194+00:00",
+  "fetched_at": "2026-03-12T21:50:34.471061+00:00",
   "forecast": [
-    {
-      "day": "Thursday",
-      "condition": "Periods of snow. Temperature falling to minus 3 this afternoon",
-      "icon": "\u2744\ufe0f",
-      "high": null,
-      "low": -8
-    },
     {
       "day": "Friday",
       "condition": "Periods of snow",
       "icon": "\u2744\ufe0f",
       "high": -5,
-      "low": -8
+      "low": -9
     },
     {
       "day": "Saturday",
       "condition": "Snow",
       "icon": "\u2744\ufe0f",
-      "high": -9,
-      "low": -14
+      "high": -10,
+      "low": -16
     },
     {
       "day": "Sunday",
@@ -33,21 +26,21 @@
       "day": "Monday",
       "condition": "A mix of sun and cloud",
       "icon": "\ud83c\udf28\ufe0f",
-      "high": 9,
-      "low": 9
+      "high": 11,
+      "low": 10
     },
     {
       "day": "Tuesday",
       "condition": "A mix of sun and cloud",
       "icon": "\ud83c\udf28\ufe0f",
-      "high": 19,
-      "low": 7
+      "high": 21,
+      "low": 9
     },
     {
       "day": "Wednesday",
-      "condition": "A mix of sun and cloud",
-      "icon": "\ud83c\udf28\ufe0f",
-      "high": 20,
+      "condition": "Sunny",
+      "icon": "\u2600\ufe0f",
+      "high": 21,
       "low": null
     }
   ]
