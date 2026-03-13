@@ -1,11 +1,11 @@
 {
-  "fetched_at": "2026-03-13T13:42:16.772537+00:00",
+  "fetched_at": "2026-03-13T14:27:05.290741+00:00",
   "forecast": [
     {
       "day": "Friday",
-      "condition": "Periods of snow. Temperature steady near minus 8",
+      "condition": "Chance of flurries",
       "icon": "\u2744\ufe0f",
-      "high": null,
+      "high": -3,
       "low": null
     },
     {
