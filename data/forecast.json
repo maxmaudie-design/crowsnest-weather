@@ -1,26 +1,26 @@
 {
-  "fetched_at": "2026-03-14T10:32:19.559619+00:00",
+  "fetched_at": "2026-03-14T10:55:30.630012+00:00",
   "forecast": [
     {
       "day": "Saturday",
-      "condition": "Snow. Temperature falling to minus 13 in the afternoon",
+      "condition": "Snow. Temperature falling to minus 13 this afternoon",
       "icon": "\u2744\ufe0f",
       "high": null,
-      "low": -16
+      "low": -17
     },
     {
       "day": "Sunday",
-      "condition": "Sunny",
+      "condition": "Mainly sunny",
       "icon": "\u2600\ufe0f",
       "high": 0,
-      "low": -3
+      "low": -5
     },
     {
       "day": "Monday",
       "condition": "A mix of sun and cloud",
       "icon": "\ud83c\udf28\ufe0f",
-      "high": 9,
-      "low": 8
+      "high": 10,
+      "low": 6
     },
     {
       "day": "Tuesday",
@@ -33,14 +33,21 @@
       "day": "Wednesday",
       "condition": "A mix of sun and cloud",
       "icon": "\ud83c\udf28\ufe0f",
-      "high": 19,
+      "high": 15,
       "low": null
     },
     {
       "day": "Thursday",
       "condition": "A mix of sun and cloud",
       "icon": "\ud83c\udf28\ufe0f",
-      "high": 14,
+      "high": 16,
+      "low": null
+    },
+    {
+      "day": "Friday",
+      "condition": "A mix of sun and cloud",
+      "icon": "\ud83c\udf28\ufe0f",
+      "high": 13,
       "low": null
     }
   ]
