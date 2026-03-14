@@ -1,9 +1,9 @@
 {
-  "fetched_at": "2026-03-14T16:23:47.484697+00:00",
+  "fetched_at": "2026-03-14T16:52:56.592422+00:00",
   "forecast": [
     {
       "day": "Saturday",
-      "condition": "Snow. Temperature falling to minus 13 this afternoon",
+      "condition": "Periods of snow. Temperature falling to minus 13 this afternoon",
       "icon": "\u2744\ufe0f",
       "high": null,
       "low": -17
