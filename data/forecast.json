@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-03-15T16:00:14.331455+00:00",
+  "fetched_at": "2026-03-15T16:37:11.256692+00:00",
   "forecast": [
     {
       "day": "Sunday",
-      "condition": "Increasing cloudiness",
-      "icon": "\ud83c\udf24\ufe0f",
+      "condition": "A mix of sun and cloud",
+      "icon": "\ud83c\udf28\ufe0f",
       "high": null,
       "low": -6
     },
