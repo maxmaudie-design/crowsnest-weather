@@ -1,9 +1,9 @@
 {
-  "fetched_at": "2026-03-16T14:49:54.863715+00:00",
+  "fetched_at": "2026-03-16T15:48:07.024253+00:00",
   "forecast": [
     {
       "day": "Monday",
-      "condition": "Chance of flurries or rain showers",
+      "condition": "Chance of showers",
       "icon": "\ud83c\udf27\ufe0f",
       "high": 9,
       "low": null
