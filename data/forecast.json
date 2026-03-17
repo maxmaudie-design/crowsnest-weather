@@ -1,19 +1,12 @@
 {
-  "fetched_at": "2026-03-17T21:23:34.745778+00:00",
+  "fetched_at": "2026-03-17T21:57:58.445840+00:00",
   "forecast": [
     {
-      "day": "Tuesday",
-      "condition": "Chance of showers",
-      "icon": "\ud83c\udf27\ufe0f",
-      "high": 14,
-      "low": 8
-    },
-    {
       "day": "Wednesday",
-      "condition": "Chance of showers",
-      "icon": "\ud83c\udf27\ufe0f",
-      "high": 14,
-      "low": 7
+      "condition": "Mainly cloudy",
+      "icon": "\u2601\ufe0f",
+      "high": 15,
+      "low": 8
     },
     {
       "day": "Thursday",
