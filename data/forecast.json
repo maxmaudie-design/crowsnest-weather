@@ -1,9 +1,9 @@
 {
-  "fetched_at": "2026-03-23T16:12:37.459343+00:00",
+  "fetched_at": "2026-03-23T17:08:23.283899+00:00",
   "forecast": [
     {
       "day": "Monday",
-      "condition": "Clearing",
+      "condition": "Mainly sunny",
       "icon": "\u2600\ufe0f",
       "high": 10,
       "low": -1
