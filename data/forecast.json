@@ -1,9 +1,9 @@
 {
-  "fetched_at": "2026-03-25T15:59:48.664269+00:00",
+  "fetched_at": "2026-03-25T17:04:53.998902+00:00",
   "forecast": [
     {
       "day": "Wednesday",
-      "condition": "Showers",
+      "condition": "A few rain showers or flurries",
       "icon": "\ud83c\udf27\ufe0f",
       "high": 9,
       "low": -11
