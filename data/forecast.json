@@ -1,33 +1,33 @@
 {
-  "fetched_at": "2026-03-30T09:07:26.140986+00:00",
+  "fetched_at": "2026-03-30T10:38:26.862283+00:00",
   "forecast": [
     {
       "day": "Monday",
-      "condition": "Snow at times heavy",
+      "condition": "Snow. Temperature steady near minus 4",
       "icon": "\u2744\ufe0f",
-      "high": -6,
-      "low": -15
+      "high": null,
+      "low": -13
     },
     {
       "day": "Tuesday",
-      "condition": "Sunny",
+      "condition": "Mainly sunny",
       "icon": "\u2600\ufe0f",
       "high": null,
-      "low": -6
+      "low": -8
     },
     {
       "day": "Wednesday",
       "condition": "Cloudy",
       "icon": "\u2601\ufe0f",
-      "high": null,
-      "low": -2
+      "high": 7,
+      "low": 0
     },
     {
       "day": "Thursday",
-      "condition": "Snow",
-      "icon": "\u2744\ufe0f",
+      "condition": "Rain or snow",
+      "icon": "\ud83c\udf28\ufe0f",
       "high": null,
-      "low": -1
+      "low": -4
     },
     {
       "day": "Friday",
@@ -40,7 +40,14 @@
       "day": "Saturday",
       "condition": "A mix of sun and cloud",
       "icon": "\ud83c\udf28\ufe0f",
-      "high": 13,
+      "high": 15,
+      "low": null
+    },
+    {
+      "day": "Sunday",
+      "condition": "A mix of sun and cloud",
+      "icon": "\ud83c\udf28\ufe0f",
+      "high": 12,
       "low": null
     }
   ]
