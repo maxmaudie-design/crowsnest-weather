@@ -1,9 +1,9 @@
 {
-  "fetched_at": "2026-03-30T07:57:37.103843+00:00",
+  "fetched_at": "2026-03-30T09:07:26.140986+00:00",
   "forecast": [
     {
       "day": "Monday",
-      "condition": "Snow",
+      "condition": "Snow at times heavy",
       "icon": "\u2744\ufe0f",
       "high": -6,
       "low": -15
