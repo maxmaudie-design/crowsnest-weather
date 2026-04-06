@@ -1,46 +1,53 @@
 {
-  "fetched_at": "2026-04-06T09:52:21.003062+00:00",
+  "fetched_at": "2026-04-06T10:43:35.662698+00:00",
   "forecast": [
     {
       "day": "Monday",
       "condition": "Chance of flurries",
       "icon": "\u2744\ufe0f",
-      "high": 13,
-      "low": null
+      "high": 12,
+      "low": 7
     },
     {
       "day": "Tuesday",
-      "condition": "Showers",
+      "condition": "Rain showers or flurries. Temperature falling to minus 3 in the afternoon",
       "icon": "\ud83c\udf27\ufe0f",
-      "high": 8,
+      "high": null,
       "low": -7
     },
     {
       "day": "Wednesday",
       "condition": "Sunny",
       "icon": "\u2600\ufe0f",
-      "high": 8,
-      "low": -3
+      "high": 6,
+      "low": -5
     },
     {
       "day": "Thursday",
       "condition": "Sunny",
       "icon": "\u2600\ufe0f",
-      "high": 10,
-      "low": -2
+      "high": 9,
+      "low": -3
     },
     {
       "day": "Friday",
       "condition": "Sunny",
       "icon": "\u2600\ufe0f",
-      "high": 19,
+      "high": 15,
       "low": null
     },
     {
       "day": "Saturday",
+      "condition": "A mix of sun and cloud",
+      "icon": "\ud83c\udf28\ufe0f",
+      "high": 18,
+      "low": null
+    },
+    {
+      "day": "Sunday",
       "condition": "Chance of showers",
       "icon": "\ud83c\udf27\ufe0f",
-      "high": 13,
+      "high": 10,
       "low": null
     }
   ]
