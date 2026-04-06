@@ -1,19 +1,12 @@
 {
-  "fetched_at": "2026-04-06T21:24:58.334285+00:00",
+  "fetched_at": "2026-04-06T21:55:36.997374+00:00",
   "forecast": [
     {
-      "day": "Monday",
-      "condition": "Chance of flurries",
-      "icon": "\u2744\ufe0f",
-      "high": 12,
-      "low": 7
-    },
-    {
       "day": "Tuesday",
-      "condition": "Rain showers or flurries. Temperature falling to minus 3 in the afternoon",
+      "condition": "Flurries at times heavy or rain showers. Temperature falling to minus 1 in the afternoon",
       "icon": "\ud83c\udf27\ufe0f",
       "high": null,
-      "low": -7
+      "low": -8
     },
     {
       "day": "Wednesday",
@@ -27,7 +20,7 @@
       "condition": "Sunny",
       "icon": "\u2600\ufe0f",
       "high": 9,
-      "low": -3
+      "low": -4
     },
     {
       "day": "Friday",
