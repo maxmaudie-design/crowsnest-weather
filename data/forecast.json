@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-04-07T17:13:32.849127+00:00",
+  "fetched_at": "2026-04-07T18:08:11.728795+00:00",
   "forecast": [
     {
       "day": "Tuesday",
-      "condition": "Flurries at times heavy or rain showers. Temperature falling to minus 4 this afternoon",
-      "icon": "\ud83c\udf27\ufe0f",
+      "condition": "Flurries at times heavy. Temperature falling to minus 4 this afternoon",
+      "icon": "\u2744\ufe0f",
       "high": null,
       "low": -8
     },
