@@ -1,38 +1,31 @@
 {
-  "fetched_at": "2026-04-09T21:01:12.874349+00:00",
+  "fetched_at": "2026-04-09T21:50:29.513252+00:00",
   "forecast": [
     {
-      "day": "Thursday",
-      "condition": "Mainly sunny",
-      "icon": "\u2600\ufe0f",
-      "high": 9,
-      "low": -3
-    },
-    {
       "day": "Friday",
-      "condition": "Mainly sunny",
+      "condition": "Sunny",
       "icon": "\u2600\ufe0f",
       "high": 16,
-      "low": -2
+      "low": -1
     },
     {
       "day": "Saturday",
       "condition": "A mix of sun and cloud",
       "icon": "\ud83c\udf28\ufe0f",
-      "high": 15,
+      "high": 16,
       "low": null
     },
     {
       "day": "Sunday",
-      "condition": "Periods of rain",
-      "icon": "\ud83c\udf27\ufe0f",
-      "high": null,
+      "condition": "A mix of sun and cloud",
+      "icon": "\ud83c\udf28\ufe0f",
+      "high": 8,
       "low": -1
     },
     {
       "day": "Monday",
-      "condition": "Cloudy",
-      "icon": "\u2601\ufe0f",
+      "condition": "A mix of sun and cloud",
+      "icon": "\ud83c\udf28\ufe0f",
       "high": 11,
       "low": null
     },
@@ -40,7 +33,7 @@
       "day": "Tuesday",
       "condition": "A mix of sun and cloud",
       "icon": "\ud83c\udf28\ufe0f",
-      "high": 14,
+      "high": 15,
       "low": 0
     },
     {
