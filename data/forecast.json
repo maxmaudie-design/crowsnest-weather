@@ -1,24 +1,24 @@
 {
-  "fetched_at": "2026-04-11T10:39:26.025536+00:00",
+  "fetched_at": "2026-04-11T11:05:18.734148+00:00",
   "forecast": [
     {
       "day": "Saturday",
       "condition": "Chance of showers",
       "icon": "\ud83c\udf27\ufe0f",
-      "high": 17,
+      "high": 16,
       "low": null
     },
     {
       "day": "Sunday",
-      "condition": "Chance of showers",
-      "icon": "\ud83c\udf27\ufe0f",
+      "condition": "Periods of snow or rain",
+      "icon": "\ud83c\udf28\ufe0f",
       "high": 7,
-      "low": -4
+      "low": -3
     },
     {
       "day": "Monday",
-      "condition": "A mix of sun and cloud",
-      "icon": "\ud83c\udf28\ufe0f",
+      "condition": "Chance of showers",
+      "icon": "\ud83c\udf27\ufe0f",
       "high": 15,
       "low": null
     },
@@ -26,21 +26,28 @@
       "day": "Tuesday",
       "condition": "A mix of sun and cloud",
       "icon": "\ud83c\udf28\ufe0f",
-      "high": 10,
-      "low": null
+      "high": 9,
+      "low": 0
     },
     {
       "day": "Wednesday",
-      "condition": "Chance of showers",
-      "icon": "\ud83c\udf27\ufe0f",
-      "high": 8,
-      "low": -4
+      "condition": "A mix of sun and cloud",
+      "icon": "\ud83c\udf28\ufe0f",
+      "high": null,
+      "low": -5
     },
     {
       "day": "Thursday",
-      "condition": "Chance of flurries or rain showers",
-      "icon": "\ud83c\udf27\ufe0f",
+      "condition": "A mix of sun and cloud",
+      "icon": "\ud83c\udf28\ufe0f",
       "high": null,
+      "low": -4
+    },
+    {
+      "day": "Friday",
+      "condition": "A mix of sun and cloud",
+      "icon": "\ud83c\udf28\ufe0f",
+      "high": 9,
       "low": null
     }
   ]
