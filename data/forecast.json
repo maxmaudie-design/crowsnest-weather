@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-04-12T14:22:11.196533+00:00",
+  "fetched_at": "2026-04-12T15:40:14.680114+00:00",
   "forecast": [
     {
       "day": "Sunday",
-      "condition": "Periods of rain mixed with snow",
-      "icon": "\ud83c\udf28\ufe0f",
+      "condition": "A few rain showers or flurries",
+      "icon": "\ud83c\udf27\ufe0f",
       "high": 7,
       "low": -3
     },
