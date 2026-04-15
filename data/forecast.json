@@ -1,33 +1,26 @@
 {
-  "fetched_at": "2026-04-15T21:30:10.363618+00:00",
+  "fetched_at": "2026-04-15T22:09:49.149750+00:00",
   "forecast": [
     {
-      "day": "Wednesday",
-      "condition": "Mainly cloudy",
-      "icon": "\u2601\ufe0f",
-      "high": 10,
-      "low": -7
-    },
-    {
       "day": "Thursday",
-      "condition": "Chance of flurries",
+      "condition": "Periods of snow",
       "icon": "\u2744\ufe0f",
-      "high": -2,
-      "low": -8
+      "high": -4,
+      "low": -10
     },
     {
       "day": "Friday",
-      "condition": "A mix of sun and cloud",
-      "icon": "\ud83c\udf28\ufe0f",
+      "condition": "Chance of showers",
+      "icon": "\ud83c\udf27\ufe0f",
       "high": null,
-      "low": -5
+      "low": -4
     },
     {
       "day": "Saturday",
       "condition": "Sunny",
       "icon": "\u2600\ufe0f",
-      "high": 10,
-      "low": 0
+      "high": 11,
+      "low": -1
     },
     {
       "day": "Sunday",
@@ -40,14 +33,14 @@
       "day": "Monday",
       "condition": "A mix of sun and cloud",
       "icon": "\ud83c\udf28\ufe0f",
-      "high": 19,
+      "high": 20,
       "low": null
     },
     {
       "day": "Tuesday",
-      "condition": "A mix of sun and cloud",
-      "icon": "\ud83c\udf28\ufe0f",
-      "high": 19,
+      "condition": "Chance of showers",
+      "icon": "\ud83c\udf27\ufe0f",
+      "high": 16,
       "low": null
     }
   ]
