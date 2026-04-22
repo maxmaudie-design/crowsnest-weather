@@ -1,11 +1,11 @@
 {
-  "fetched_at": "2026-04-22T15:45:26.021559+00:00",
+  "fetched_at": "2026-04-22T16:42:52.709541+00:00",
   "forecast": [
     {
       "day": "Wednesday",
       "condition": "Rain",
       "icon": "\ud83c\udf27\ufe0f",
-      "high": 15,
+      "high": 17,
       "low": -1
     },
     {
