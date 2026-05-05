@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-05-05T12:54:30.259312+00:00",
+  "fetched_at": "2026-05-05T16:23:11.157955+00:00",
   "forecast": [
     {
       "day": "Tuesday",
-      "condition": "Mainly cloudy",
-      "icon": "\u2601\ufe0f",
+      "condition": "Chance of showers",
+      "icon": "\ud83c\udf27\ufe0f",
       "high": 8,
       "low": -2
     },
