@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-05-17T14:08:29.645373+00:00",
+  "fetched_at": "2026-05-17T15:14:00.626670+00:00",
   "forecast": [
     {
       "day": "Sunday",
-      "condition": "Periods of wet snow mixed with rain",
-      "icon": "\ud83c\udf28\ufe0f",
+      "condition": "Chance of wet flurries or rain showers",
+      "icon": "\ud83c\udf27\ufe0f",
       "high": 7,
       "low": -2
     },
