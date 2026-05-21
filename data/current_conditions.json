@@ -1,26 +1,28 @@
 {
-  "timestamp": "2026-05-21T21:12:20.434836Z",
+  "timestamp": "2026-05-21T22:39:50.204508Z",
   "source": "Environment Canada",
   "location": "Crowsnest Pass, AB",
   "conditions": {
-    "temperature": 14.8,
+    "temperature": 14.9,
     "pressure_kpa": 101.9,
     "pressure_tendency": "falling",
-    "humidity_percent": 28,
-    "dewpoint": -3.5,
-    "wind_speed_kmh": 12,
-    "wind_direction": "SSW",
-    "condition": "Chance of showers"
+    "humidity_percent": 30,
+    "dewpoint": -2.4,
+    "wind_speed_kmh": 20,
+    "wind_direction": "WNW",
+    "wind_gust_kmh": 32,
+    "condition": "Chance of showers",
+    "daily_max_gust_kmh": 32
   },
   "daily_stats": {
     "date": "2026-05-21",
-    "max_gust_kmh": null,
-    "max_gust_time": null,
-    "high_temp": 14.8,
-    "high_temp_time": "21:12 UTC",
+    "max_gust_kmh": 32,
+    "max_gust_time": "22:39 UTC",
+    "high_temp": 14.9,
+    "high_temp_time": "22:39 UTC",
     "low_temp": -1.2,
     "low_temp_time": "08:58 UTC"
   },
-  "observation_time": "2026-05-21T21:00:00Z",
-  "fetch_time_utc": "2026-05-21T21:12:20.434843Z"
+  "observation_time": "2026-05-21T22:00:00Z",
+  "fetch_time_utc": "2026-05-21T22:39:50.204515Z"
 }
