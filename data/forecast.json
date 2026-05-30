@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-30T10:10:17.004256+00:00",
+  "fetched_at": "2026-05-30T12:48:28.574912+00:00",
   "forecast": [
     {
       "day": "Saturday",
@@ -10,37 +10,44 @@
     },
     {
       "day": "Sunday",
-      "condition": "Periods of rain",
+      "condition": "Rain",
       "icon": "\ud83c\udf27\ufe0f",
-      "high": 12,
-      "low": 7
+      "high": 11,
+      "low": 6
     },
     {
       "day": "Monday",
-      "condition": "Periods of rain",
+      "condition": "Rain",
       "icon": "\ud83c\udf27\ufe0f",
-      "high": 10,
+      "high": 9,
       "low": null
     },
     {
       "day": "Tuesday",
       "condition": "Chance of showers",
       "icon": "\ud83c\udf27\ufe0f",
-      "high": 13,
-      "low": 8
+      "high": 9,
+      "low": null
     },
     {
       "day": "Wednesday",
-      "condition": "Chance of showers",
-      "icon": "\ud83c\udf27\ufe0f",
-      "high": 18,
-      "low": 9
+      "condition": "A mix of sun and cloud",
+      "icon": "\ud83c\udf28\ufe0f",
+      "high": 15,
+      "low": 8
     },
     {
       "day": "Thursday",
       "condition": "Chance of showers",
       "icon": "\ud83c\udf27\ufe0f",
       "high": 19,
+      "low": 9
+    },
+    {
+      "day": "Friday",
+      "condition": "A mix of sun and cloud",
+      "icon": "\ud83c\udf28\ufe0f",
+      "high": 23,
       "low": null
     }
   ]
