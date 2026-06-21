@@ -1,7 +1,7 @@
 {
   "date": "2026-06-21",
-  "max_gust_kmh": null,
-  "max_gust_time": null,
+  "max_gust_kmh": 85,
+  "max_gust_time": "23:53 UTC",
   "max_wind_kmh": 24,
   "max_wind_time": "22:37 UTC",
   "high_temp": 18.0,
