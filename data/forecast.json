@@ -1,9 +1,9 @@
 {
-  "fetched_at": "2026-06-28T14:08:33.043047+00:00",
+  "fetched_at": "2026-06-28T16:45:24.692357+00:00",
   "forecast": [
     {
       "day": "Sunday",
-      "condition": "Chance of showers",
+      "condition": "Rain",
       "icon": "\ud83c\udf27\ufe0f",
       "high": 15,
       "low": 12
