@@ -29,13 +29,8 @@
       "date": "2026-06-29",
       "high": 17.5,
       "low": 7.7
-    },
-    {
-      "date": "2026-06-28",
-      "high": 13.0,
-      "low": 8.1
     }
   ],
-  "last_updated": "2026-07-05T23:15:00.702579Z",
+  "last_updated": "2026-07-06T04:40:08.750203Z",
   "source": "Environment Canada MSC Datamart - Station 3051R4R"
 }
