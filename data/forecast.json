@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-08T12:52:28.291850+00:00",
+  "fetched_at": "2026-07-08T15:02:37.298825+00:00",
   "forecast": [
     {
       "day": "Wednesday",
-      "condition": "Mainly sunny",
-      "icon": "\u2600\ufe0f",
+      "condition": "Chance of showers",
+      "icon": "\ud83c\udf27\ufe0f",
       "high": 30,
       "low": 8
     },
