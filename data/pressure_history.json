@@ -1266,19 +1266,14 @@
     },
     {
       "date": "2026-07-18",
-      "min_kpa": 101.3,
+      "min_kpa": 101.2,
       "max_kpa": 101.7,
-      "last_kpa": 101.3,
+      "last_kpa": 101.2,
       "last_tendency": "falling",
-      "readings": 11
+      "readings": 12
     }
   ],
   "hourly_readings": [
-    {
-      "hour": "2026-07-14T05:00:00Z",
-      "kpa": 102.0,
-      "tendency": "rising"
-    },
     {
       "hour": "2026-07-14T07:00:00Z",
       "kpa": 102.0,
@@ -1633,9 +1628,14 @@
       "hour": "2026-07-18T19:00:00Z",
       "kpa": 101.3,
       "tendency": "falling"
+    },
+    {
+      "hour": "2026-07-18T20:00:00Z",
+      "kpa": 101.2,
+      "tendency": "falling"
     }
   ],
-  "last_updated": "2026-07-18T19:39:59.329674Z",
+  "last_updated": "2026-07-18T20:26:03.379227Z",
   "source": "Environment Canada RSS - Crowsnest Pass (MSLP kPa)",
   "note": "Mean sea level pressure. Recording started Feb 2026."
 }
