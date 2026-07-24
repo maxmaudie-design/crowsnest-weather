@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-24T00:08:55.203319+00:00",
+  "fetched_at": "2026-07-24T03:37:38.651439+00:00",
   "forecast": [
     {
       "day": "Friday",
@@ -19,28 +19,28 @@
       "day": "Sunday",
       "condition": "Sunny",
       "icon": "\u2600\ufe0f",
-      "high": 28,
-      "low": 18
+      "high": 30,
+      "low": 12
     },
     {
       "day": "Monday",
       "condition": "Sunny",
       "icon": "\u2600\ufe0f",
-      "high": null,
-      "low": null
+      "high": 28,
+      "low": 11
     },
     {
       "day": "Tuesday",
       "condition": "Sunny",
       "icon": "\u2600\ufe0f",
-      "high": null,
-      "low": null
+      "high": 31,
+      "low": 12
     },
     {
       "day": "Wednesday",
       "condition": "Sunny",
       "icon": "\u2600\ufe0f",
-      "high": null,
+      "high": 32,
       "low": null
     }
   ]
