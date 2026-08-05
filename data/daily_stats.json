@@ -2,10 +2,10 @@
   "date": "2026-08-05",
   "max_gust_kmh": null,
   "max_gust_time": null,
-  "max_wind_kmh": 10,
-  "max_wind_time": "19:58 UTC",
-  "high_temp": 22.8,
-  "high_temp_time": "19:58 UTC",
+  "max_wind_kmh": 18,
+  "max_wind_time": "21:04 UTC",
+  "high_temp": 24.4,
+  "high_temp_time": "21:04 UTC",
   "low_temp": 3.0,
   "low_temp_time": "13:13 UTC"
 }
