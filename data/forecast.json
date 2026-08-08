@@ -1,46 +1,53 @@
 {
-  "fetched_at": "2026-08-08T10:15:07.246913+00:00",
+  "fetched_at": "2026-08-08T10:51:23.697339+00:00",
   "forecast": [
     {
       "day": "Saturday",
       "condition": "Smoke",
       "icon": "\ud83c\udf24\ufe0f",
       "high": 25,
-      "low": 9
+      "low": 10
     },
     {
       "day": "Sunday",
-      "condition": "Chance of showers",
-      "icon": "\ud83c\udf27\ufe0f",
+      "condition": "Smoke",
+      "icon": "\ud83c\udf24\ufe0f",
       "high": 23,
-      "low": 12
+      "low": 11
     },
     {
       "day": "Monday",
       "condition": "Sunny",
       "icon": "\u2600\ufe0f",
       "high": 23,
-      "low": 10
+      "low": 11
     },
     {
       "day": "Tuesday",
-      "condition": "Chance of showers",
-      "icon": "\ud83c\udf27\ufe0f",
-      "high": 20,
-      "low": 10
+      "condition": "Sunny",
+      "icon": "\u2600\ufe0f",
+      "high": 23,
+      "low": 11
     },
     {
       "day": "Wednesday",
       "condition": "Chance of showers",
       "icon": "\ud83c\udf27\ufe0f",
       "high": 20,
-      "low": 10
+      "low": 11
     },
     {
       "day": "Thursday",
       "condition": "Chance of showers",
       "icon": "\ud83c\udf27\ufe0f",
-      "high": 19,
+      "high": 18,
+      "low": 9
+    },
+    {
+      "day": "Friday",
+      "condition": "Chance of showers",
+      "icon": "\ud83c\udf27\ufe0f",
+      "high": 21,
       "low": null
     }
   ]
