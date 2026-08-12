@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-12T23:05:51.650677+00:00",
+  "fetched_at": "2026-08-12T23:52:56.141159+00:00",
   "forecast": [
     {
       "day": "Thursday",
@@ -10,9 +10,9 @@
     },
     {
       "day": "Friday",
-      "condition": "Showers",
+      "condition": "Chance of showers",
       "icon": "\ud83c\udf27\ufe0f",
-      "high": 15,
+      "high": 17,
       "low": null
     },
     {
