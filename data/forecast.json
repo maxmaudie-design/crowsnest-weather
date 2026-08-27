@@ -1,11 +1,11 @@
 {
-  "fetched_at": "2026-08-27T10:37:57.955615+00:00",
+  "fetched_at": "2026-08-27T20:44:22.853114+00:00",
   "forecast": [
     {
       "day": "Thursday",
       "condition": "Chance of showers",
       "icon": "\ud83c\udf27\ufe0f",
-      "high": 28,
+      "high": 27,
       "low": 11
     },
     {
