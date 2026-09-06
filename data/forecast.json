@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-09-06T15:52:11.333432+00:00",
+  "fetched_at": "2026-09-06T17:46:21.895930+00:00",
   "forecast": [
     {
       "day": "Sunday",
-      "condition": "A few showers",
-      "icon": "\ud83c\udf27\ufe0f",
+      "condition": "Periods of drizzle",
+      "icon": "\ud83c\udf24\ufe0f",
       "high": 12,
       "low": 9
     },
