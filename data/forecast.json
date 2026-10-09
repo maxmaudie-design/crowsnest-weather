@@ -1,53 +1,46 @@
 {
-  "fetched_at": "2026-10-09T18:46:55.150656+00:00",
+  "fetched_at": "2026-10-09T22:54:53.213742+00:00",
   "forecast": [
     {
-      "day": "Friday",
-      "condition": "Chance of showers",
-      "icon": "\ud83c\udf27\ufe0f",
-      "high": 19,
-      "low": null
-    },
-    {
       "day": "Saturday",
-      "condition": "Snow or rain. Temperature falling to zero in the afternoon",
+      "condition": "Snow or rain. Temperature steady near plus 2",
       "icon": "\ud83c\udf28\ufe0f",
       "high": null,
       "low": -3
     },
     {
       "day": "Sunday",
-      "condition": "Periods of snow",
+      "condition": "Snow",
       "icon": "\u2744\ufe0f",
       "high": 0,
-      "low": -7
+      "low": -3
     },
     {
       "day": "Monday",
-      "condition": "Sunny",
-      "icon": "\u2600\ufe0f",
-      "high": 8,
-      "low": -1
+      "condition": "A mix of sun and cloud",
+      "icon": "\ud83c\udf28\ufe0f",
+      "high": 7,
+      "low": 0
     },
     {
       "day": "Tuesday",
       "condition": "Sunny",
       "icon": "\u2600\ufe0f",
-      "high": 14,
+      "high": 13,
       "low": null
     },
     {
       "day": "Wednesday",
-      "condition": "A mix of sun and cloud",
-      "icon": "\ud83c\udf28\ufe0f",
-      "high": 15,
+      "condition": "Sunny",
+      "icon": "\u2600\ufe0f",
+      "high": 16,
       "low": null
     },
     {
       "day": "Thursday",
-      "condition": "A mix of sun and cloud",
-      "icon": "\ud83c\udf28\ufe0f",
-      "high": 13,
+      "condition": "Sunny",
+      "icon": "\u2600\ufe0f",
+      "high": 14,
       "low": null
     }
   ]
