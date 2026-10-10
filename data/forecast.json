@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-10-10T14:24:58.960699+00:00",
+  "fetched_at": "2026-10-10T18:43:31.572929+00:00",
   "forecast": [
     {
       "day": "Saturday",
-      "condition": "Snow or rain. Temperature falling to zero this afternoon",
-      "icon": "\ud83c\udf28\ufe0f",
+      "condition": "Snow. Temperature steady near zero",
+      "icon": "\u2744\ufe0f",
       "high": null,
       "low": -2
     },
