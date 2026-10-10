@@ -1,47 +1,40 @@
 {
-  "fetched_at": "2026-10-10T18:43:31.572929+00:00",
+  "fetched_at": "2026-10-10T21:59:21.533921+00:00",
   "forecast": [
     {
-      "day": "Saturday",
-      "condition": "Snow. Temperature steady near zero",
-      "icon": "\u2744\ufe0f",
-      "high": null,
-      "low": -2
-    },
-    {
       "day": "Sunday",
-      "condition": "Periods of snow",
+      "condition": "Snow",
       "icon": "\u2744\ufe0f",
       "high": 0,
-      "low": -4
+      "low": -3
     },
     {
       "day": "Monday",
       "condition": "Sunny",
       "icon": "\u2600\ufe0f",
-      "high": 8,
-      "low": 0
+      "high": 6,
+      "low": null
     },
     {
       "day": "Tuesday",
       "condition": "Sunny",
       "icon": "\u2600\ufe0f",
-      "high": 12,
+      "high": 14,
       "low": null
     },
     {
       "day": "Wednesday",
       "condition": "Sunny",
       "icon": "\u2600\ufe0f",
-      "high": 16,
+      "high": 15,
       "low": null
     },
     {
       "day": "Thursday",
       "condition": "Sunny",
       "icon": "\u2600\ufe0f",
-      "high": 14,
-      "low": null
+      "high": 12,
+      "low": 0
     },
     {
       "day": "Friday",
