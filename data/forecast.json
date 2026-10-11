@@ -1,12 +1,12 @@
 {
-  "fetched_at": "2026-10-11T13:12:22.671713+00:00",
+  "fetched_at": "2026-10-11T18:03:25.773216+00:00",
   "forecast": [
     {
       "day": "Sunday",
       "condition": "Snow",
       "icon": "\u2744\ufe0f",
       "high": 0,
-      "low": null
+      "low": -3
     },
     {
       "day": "Monday",
