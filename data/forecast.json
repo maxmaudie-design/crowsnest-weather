@@ -1,53 +1,46 @@
 {
-  "fetched_at": "2026-10-25T21:09:19.866935+00:00",
+  "fetched_at": "2026-10-25T23:11:47.662852+00:00",
   "forecast": [
     {
-      "day": "Sunday",
+      "day": "Monday",
       "condition": "Chance of flurries",
       "icon": "\u2744\ufe0f",
-      "high": 0,
-      "low": -4
+      "high": null,
+      "low": -3
     },
     {
-      "day": "Monday",
-      "condition": "Mainly cloudy",
-      "icon": "\u2601\ufe0f",
+      "day": "Tuesday",
+      "condition": "Periods of rain",
+      "icon": "\ud83c\udf27\ufe0f",
       "high": null,
       "low": -4
     },
     {
-      "day": "Tuesday",
-      "condition": "Cloudy",
-      "icon": "\u2601\ufe0f",
-      "high": 6,
-      "low": -2
-    },
-    {
       "day": "Wednesday",
-      "condition": "Chance of flurries",
+      "condition": "Periods of snow",
       "icon": "\u2744\ufe0f",
-      "high": 0,
-      "low": -7
+      "high": -1,
+      "low": -6
     },
     {
       "day": "Thursday",
-      "condition": "Chance of flurries",
-      "icon": "\u2744\ufe0f",
-      "high": -4,
+      "condition": "Cloudy",
+      "icon": "\u2601\ufe0f",
+      "high": -3,
       "low": -7
     },
     {
       "day": "Friday",
-      "condition": "Chance of flurries",
-      "icon": "\u2744\ufe0f",
-      "high": 0,
-      "low": -5
+      "condition": "Cloudy",
+      "icon": "\u2601\ufe0f",
+      "high": null,
+      "low": -3
     },
     {
       "day": "Saturday",
       "condition": "A mix of sun and cloud",
       "icon": "\ud83c\udf28\ufe0f",
-      "high": 7,
+      "high": 9,
       "low": null
     }
   ]
