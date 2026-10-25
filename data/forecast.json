@@ -1,9 +1,9 @@
 {
-  "fetched_at": "2026-10-25T15:41:25.508872+00:00",
+  "fetched_at": "2026-10-25T18:32:34.502842+00:00",
   "forecast": [
     {
       "day": "Sunday",
-      "condition": "Periods of light snow",
+      "condition": "Chance of flurries",
       "icon": "\u2744\ufe0f",
       "high": 0,
       "low": -4
