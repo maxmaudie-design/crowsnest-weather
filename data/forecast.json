@@ -1,11 +1,11 @@
 {
-  "fetched_at": "2026-10-29T15:31:08.218388+00:00",
+  "fetched_at": "2026-10-29T20:28:19.984556+00:00",
   "forecast": [
     {
       "day": "Thursday",
       "condition": "Chance of flurries",
       "icon": "\u2744\ufe0f",
-      "high": -2,
+      "high": -1,
       "low": -5
     },
     {
