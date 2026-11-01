@@ -1,9 +1,9 @@
 {
-  "fetched_at": "2026-11-01T16:15:24.285050+00:00",
+  "fetched_at": "2026-11-01T20:30:35.222968+00:00",
   "forecast": [
     {
       "day": "Sunday",
-      "condition": "Mainly cloudy",
+      "condition": "Cloudy",
       "icon": "\u2601\ufe0f",
       "high": null,
       "low": -5
