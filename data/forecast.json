@@ -1,18 +1,11 @@
 {
-  "fetched_at": "2026-11-11T17:07:52.967695+00:00",
+  "fetched_at": "2026-11-11T23:25:41.915236+00:00",
   "forecast": [
-    {
-      "day": "Wednesday",
-      "condition": "Mainly cloudy",
-      "icon": "\u2601\ufe0f",
-      "high": 16,
-      "low": 10
-    },
     {
       "day": "Thursday",
       "condition": "A mix of sun and cloud",
       "icon": "\ud83c\udf28\ufe0f",
-      "high": 17,
+      "high": 18,
       "low": null
     },
     {
@@ -33,7 +26,7 @@
       "day": "Sunday",
       "condition": "Sunny",
       "icon": "\u2600\ufe0f",
-      "high": 14,
+      "high": 12,
       "low": null
     },
     {
